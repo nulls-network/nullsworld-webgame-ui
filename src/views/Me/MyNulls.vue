@@ -1,68 +1,55 @@
 <template>
-  <div class="w-full sm:mt-8 md:mt-0 lg:mt-0 xl:mt-0 flex-1">
-    <div class="item-list-card">
-      <div class="item-list-card-header">
-        <div class="item-list-card-header-tabs">
-          <button class="item-list-card-header-button item-list-card-header-button-active">
-            <span class="item-list-card-header-button-text">My Nulls</span>
-          </button>
+  <NeedWalletConnect
+    @onWalletConnect="init"
+    @onAddressChange="init"
+    @onWalletDisconnect="onDisconnect"
+  >
+    <div class="filter-bar px-12 py-10">
+      <div class="nulls-count">
+        Found
+        <span class="font-bold">{{ total }}</span> Nulls
+      </div>
+      <div class="flex items-center mt-10">
+        <div
+          @click="selectFilter(filter)"
+          :class="[
+            isActiveFilter(filter) ? 'filter-item-active' : '',
+            'filter-item mr-10'
+          ]"
+          v-for="filter in filters"
+          :key="filter"
+        >
+          <img src="/meat.png" v-show="isActiveFilter(filter)" />
+          <span>{{ filter.text }}</span>
         </div>
       </div>
-      <div class="item-list-card-body" style="min-height: 50vh;">
-        <NeedWalletConnect
-          @onWalletConnect="init"
-          @onAddressChange="init"
-          @onWalletDisconnect="onDisconnect"
-        >
-          <div class="filter-bar px-12 py-10">
-            <div class="nulls-count">
-              Found
-              <span class="font-bold">{{ total }}</span> Nulls
-            </div>
-            <div class="flex items-center mt-10">
-              <div
-                @click="selectFilter(filter)"
-                :class="[
-                  isActiveFilter(filter) ? 'filter-item-active' : '',
-                  'filter-item mr-10'
-                ]"
-                v-for="filter in filters"
-                :key="filter"
-              >
-                <img src="/meat.png" v-show="isActiveFilter(filter)" />
-                <span>{{ filter.text }}</span>
-              </div>
-            </div>
-          </div>
-
-          <a-spin tip="Loading..." :spinning="fetching" delay="50">
-            <div class="my-nulls-content px-16 pb-4">
-              <NoNulls v-if="nulls?.length === 0" />
-              <Nulls
-                v-else
-                v-for="n in nulls"
-                :key="n.pet_id"
-                @onButtonClick="handleNullsButton(n)"
-                @onItemClick="goNullsDetail(n)"
-                :id="n.pet_id"
-                :data="n"
-              />
-            </div>
-          </a-spin>
-          <div class="flex justify-end px-8 py-8">
-            <a-pagination
-              @change="updateMyNulls"
-              show-quick-jumper
-              :defaultPageSize="pageSize"
-              v-model:current="page"
-              :total="total"
-              show-less-items
-            />
-          </div>
-        </NeedWalletConnect>
-      </div>
     </div>
-  </div>
+
+    <a-spin tip="Loading..." :spinning="fetching" delay="50">
+      <div class="my-nulls-content px-16 pb-4">
+        <NoNulls v-if="nulls?.length === 0" />
+        <Nulls
+          v-else
+          v-for="n in nulls"
+          :key="n.pet_id"
+          @onButtonClick="handleNullsButton(n)"
+          @onItemClick="goNullsDetail(n)"
+          :id="n.pet_id"
+          :data="n"
+        />
+      </div>
+    </a-spin>
+    <div class="flex justify-end px-8 py-8">
+      <a-pagination
+        @change="updateMyNulls"
+        show-quick-jumper
+        :defaultPageSize="pageSize"
+        v-model:current="page"
+        :total="total"
+        show-less-items
+      />
+    </div>
+  </NeedWalletConnect>
 </template>
 
 

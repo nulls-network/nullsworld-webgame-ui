@@ -1,179 +1,159 @@
 <template>
-  <div class="w-full md:mr-8 flex-1">
-    <div class="item-list-card">
-      <div class="item-list-card-header">
-        <div class="item-list-card-header-tabs">
-          <button class="item-list-card-header-button item-list-card-header-button-active">
-            <span class="item-list-card-header-button-text">My combat records</span>
-          </button>
+  <NeedWalletConnect
+    @onWalletConnect="init"
+    @onAddressChange="init"
+    @onWalletDisconnect="onDisconnect"
+  >
+    <div class="filter-bar px-12 py-10">
+      <div class="combat-records-count">
+        <img src="/ring.png" style="height: 34px;" class="mr-2" />
+        <span class="font-bold mr-2">{{ total }}</span> combats have been performed
+      </div>
+
+      <div class="flex items-center mt-10">
+        <div
+          @click="selectFilter(filter)"
+          :class="[
+            isActiveFilter(filter) ? 'filter-item-active' : '',
+            'filter-item mr-10'
+          ]"
+          v-for="filter in filters"
+          :key="filter"
+        >
+          <img src="/meat2.png" v-show="isActiveFilter(filter)" />
+          <span>{{ filter.text }}</span>
         </div>
       </div>
-      <div class="item-list-card-body" style="min-height: 50vh;">
-        <NeedWalletConnect
-          @onWalletConnect="init"
-          @onAddressChange="init"
-          @onWalletDisconnect="onDisconnect"
-        >
-          <div class="filter-bar px-12 py-10">
-            <div class="combat-records-count">
-              <img src="/ring.png" style="height: 34px;" class="mr-2" />
-              <span class="font-bold mr-2">{{ total }}</span> combats have been performed
-            </div>
-
-            <div class="flex items-center mt-10">
-              <div
-                @click="selectFilter(filter)"
-                :class="[
-                  isActiveFilter(filter) ? 'filter-item-active' : '',
-                  'filter-item mr-10'
-                ]"
-                v-for="filter in filters"
-                :key="filter"
-              >
-                <img src="/meat2.png" v-show="isActiveFilter(filter)" />
-                <span>{{ filter.text }}</span>
-              </div>
-            </div>
-          </div>
-          <a-spin tip="Loading..." :spinning="fetching" delay="50">
-            <empty class="mt-16" v-show="combatRecords?.length < 1" />
-            <div>
-              <div
-                class="info-item info-item-big justify-between items-center"
-                v-for="record in combatRecords"
-                :key="record.id"
-              >
-                <div class="flex items-center">
-                  <div class="flex items-center">
-                    <a-image
-                      class="ring-image"
-                      :src="`/gamebg${calcArenaImage(record.item_id)}.jpg`"
-                    />
-                    <div>
-                      <div
-                        :class="`info-block-num ${calcColor(record.item_id)}`"
-                      >#{{ record.item_id }}</div>
-                      <a-tooltip>
-                        <template #title>
-                          <div>
-                            <span class="font-bold">UTC+0:</span>
-                            {{ formatDate(record.create_time, { fmt: 'YYYY-MM-DD HH:mm:ss:SSSS', local: false }) }}
-                          </div>
-                          <div>
-                            <span class="font-bold">Timestamp:</span>
-                            {{ record.create_time }}
-                          </div>
-                        </template>
-                        <div
-                          class="info-time"
-                        >{{ formatDate(record.create_time, { fromNow: true }) }}</div>
-                      </a-tooltip>
-                    </div>
-                  </div>
-                  <div class="ml-10 w-36">
-                    <div :class="[combatColor(record), 'info-status']">{{ combatStatus(record) }}</div>
-                  </div>
-                  <div class="info-vs ml-8">
-                    <div class="player items-end">
-                      <div>
-                        <span
-                          :class="[calcColor(record.challenger_pet_id), 'nulls-id']"
-                        >#{{ record.challenger_pet_id }}</span>
-                        <span
-                          :class="imChallenger(record) ? 'isMe' : ''"
-                        >{{ imChallenger(record) ? 'You' : 'Challenger' }}</span>
-                      </div>
-                      <a-tooltip>
-                        <template #title>
-                          Challenger address:
-                          <div class="font-bold">{{ record.challenger_address }}</div>
-                        </template>
-                        <a
-                          :href="accountExplorer(record.challenger_address)"
-                          target="_blank"
-                          class="address"
-                        >({{ cutEthAddress(record.challenger_address, 6) }})</a>
-                      </a-tooltip>
-                    </div>
-                    <div class="vs-icon">VS</div>
-                    <div class="player items-start">
-                      <div>
-                        <span
-                          :class="imGuardians(record) ? 'isMe' : ''"
-                        >{{ imGuardians(record) ? 'You' : 'Arena' }}</span>
-                        <span
-                          :class="[calcColor(record.ring_pet_id), 'nulls-id']"
-                        >#{{ record.ring_pet_id }}</span>
-                      </div>
-                      <a-tooltip>
-                        <template #title>
-                          Arena address:
-                          <div class="font-bold">{{ record.ring_address }}</div>
-                        </template>
-                        <a
-                          :href="accountExplorer(record.ring_address)"
-                          target="_blank"
-                          class="address"
-                        >({{ cutEthAddress(record.ring_address, 6) }})</a>
-                      </a-tooltip>
-                    </div>
-                  </div>
-                  <a-tooltip>
-                    <template #title>
-                      {{ record.token_name }} Contract:
-                      <div class="font-bold">{{ record.token }}</div>
-                    </template>
-                    <a
-                      :class="[calcImWin(record) ? 'color-green' : 'color-red', 'bonus ml-14']"
-                      target="_blank"
-                      :href="accountExplorer(record.token)"
-                    >
-                      {{ calcImWin(record) ? '+' : '-' }}{{ removeDecimal(calcMyBonus(record), record.token_precision) }}
-                      {{ record.token_name }}
-                    </a>
-                  </a-tooltip>
-                </div>
-                <div class="flex items-center justify-between w-52">
-                  <div>
-                    <img
-                      style="height: 48px; width: 87px"
-                      :src="calcImWin(record) ? '/victory.png' : '/defeat.png'"
-                    />
-                  </div>
-                  <div>
-                    <a-tooltip>
-                      <template #title>
-                        Transcation Hash:
-                        <a
-                          :href="txExplorer(record.tx_hash)"
-                          target="_blank"
-                          style="font-weight: bold;"
-                        >{{ record.tx_hash }}</a>
-                      </template>
-                      <a :href="txExplorer(record.tx_hash)" target="_blank">
-                        <button class="info-item-button pop-button">
-                          <img src="/button1.png" />
-                        </button>
-                      </a>
-                    </a-tooltip>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </a-spin>
-          <div class="paging-bar px-10 pb-10 pt-4">
-            <a-pagination
-              @change="fetchData"
-              show-quick-jumper
-              v-model:current="page"
-              :total="total"
-              show-less-items
-            />
-          </div>
-        </NeedWalletConnect>
-      </div>
     </div>
-  </div>
+    <a-spin tip="Loading..." :spinning="fetching" delay="50">
+      <empty class="mt-16" v-show="combatRecords?.length < 1" />
+      <div>
+        <div
+          class="info-item info-item-big justify-between items-center"
+          v-for="record in combatRecords"
+          :key="record.id"
+        >
+          <div class="flex items-center">
+            <div class="flex items-center">
+              <a-image class="ring-image" :src="`/gamebg${calcArenaImage(record.item_id)}.jpg`" />
+              <div>
+                <div :class="`info-block-num ${calcColor(record.item_id)}`">#{{ record.item_id }}</div>
+                <a-tooltip>
+                  <template #title>
+                    <div>
+                      <span class="font-bold">UTC+0:</span>
+                      {{ formatDate(record.create_time, { fmt: 'YYYY-MM-DD HH:mm:ss:SSSS', local: false }) }}
+                    </div>
+                    <div>
+                      <span class="font-bold">Timestamp:</span>
+                      {{ record.create_time }}
+                    </div>
+                  </template>
+                  <div class="info-time">{{ formatDate(record.create_time, { fromNow: true }) }}</div>
+                </a-tooltip>
+              </div>
+            </div>
+            <div class="ml-10 w-36">
+              <div :class="[combatColor(record), 'info-status']">{{ combatStatus(record) }}</div>
+            </div>
+            <div class="info-vs ml-8">
+              <div class="player items-end">
+                <div>
+                  <span
+                    :class="[calcColor(record.challenger_pet_id), 'nulls-id']"
+                  >#{{ record.challenger_pet_id }}</span>
+                  <span
+                    :class="imChallenger(record) ? 'isMe' : ''"
+                  >{{ imChallenger(record) ? 'You' : 'Challenger' }}</span>
+                </div>
+                <a-tooltip>
+                  <template #title>
+                    Challenger address:
+                    <div class="font-bold">{{ record.challenger_address }}</div>
+                  </template>
+                  <a
+                    :href="accountExplorer(record.challenger_address)"
+                    target="_blank"
+                    class="address"
+                  >({{ cutEthAddress(record.challenger_address, 6) }})</a>
+                </a-tooltip>
+              </div>
+              <div class="vs-icon">VS</div>
+              <div class="player items-start">
+                <div>
+                  <span
+                    :class="imGuardians(record) ? 'isMe' : ''"
+                  >{{ imGuardians(record) ? 'You' : 'Arena' }}</span>
+                  <span
+                    :class="[calcColor(record.ring_pet_id), 'nulls-id']"
+                  >#{{ record.ring_pet_id }}</span>
+                </div>
+                <a-tooltip>
+                  <template #title>
+                    Arena address:
+                    <div class="font-bold">{{ record.ring_address }}</div>
+                  </template>
+                  <a
+                    :href="accountExplorer(record.ring_address)"
+                    target="_blank"
+                    class="address"
+                  >({{ cutEthAddress(record.ring_address, 6) }})</a>
+                </a-tooltip>
+              </div>
+            </div>
+            <a-tooltip>
+              <template #title>
+                {{ record.token_name }} Contract:
+                <div class="font-bold">{{ record.token }}</div>
+              </template>
+              <a
+                :class="[calcImWin(record) ? 'color-green' : 'color-red', 'bonus ml-14']"
+                target="_blank"
+                :href="accountExplorer(record.token)"
+              >
+                {{ calcImWin(record) ? '+' : '-' }}{{ removeDecimal(calcMyBonus(record), record.token_precision) }}
+                {{ record.token_name }}
+              </a>
+            </a-tooltip>
+          </div>
+          <div class="flex items-center justify-between w-52">
+            <div>
+              <img
+                style="height: 48px; width: 87px"
+                :src="calcImWin(record) ? '/victory.png' : '/defeat.png'"
+              />
+            </div>
+            <div>
+              <a-tooltip>
+                <template #title>
+                  Transcation Hash:
+                  <a
+                    :href="txExplorer(record.tx_hash)"
+                    target="_blank"
+                    style="font-weight: bold;"
+                  >{{ record.tx_hash }}</a>
+                </template>
+                <a :href="txExplorer(record.tx_hash)" target="_blank">
+                  <button class="info-item-button pop-button">
+                    <img src="/button1.png" />
+                  </button>
+                </a>
+              </a-tooltip>
+            </div>
+          </div>
+        </div>
+      </div>
+    </a-spin>
+    <div class="paging-bar px-10 pb-10 pt-4">
+      <a-pagination
+        @change="fetchData"
+        show-quick-jumper
+        v-model:current="page"
+        :total="total"
+        show-less-items
+      />
+    </div>
+  </NeedWalletConnect>
 </template>
 
 
@@ -254,11 +234,11 @@ export default {
         pageSize: this.pageSize,
         current: this.page
       })
-       this.fetching = false
+      this.fetching = false
       if (data.code != 200) return this.$message.error(data.message)
       this.total = data.data.count
       this.combatRecords = data.data.rows
-     
+
     },
     isActiveFilter(filter) {
       return this.selectedFilter === filter.value

@@ -12,37 +12,55 @@
             </div>
             <div class="md:block">
               <div class="ml-24 flex items-baseline space-x-4 justify-between">
-                <template v-for="(item, itemIdx) in imageNavItems" :key="itemIdx">
-                  <button class="nav-button with-font nav-pop-button" @click="navigateTo(item)">
+                <template v-for="item in imageNavItems" :key="`${item.name}-route`">
+                  <button
+                    :class="[$route.name === item.name ? 'current-route' : '', 'nav-button', 'with-font', 'nav-pop-button']"
+                    @click="navigateTo(item)"
+                  >
                     <img class="nav-button-image" :src="`/${item.icon}@1x.png`" />
                     <span class="px-3">{{ item.name }}</span>
                   </button>
                 </template>
-                <a-dropdown placement="bottomCenter">
-                  <div class="me">
-                    <img class="avatar" src="/home@1x.png" />
-                    <span class="username">{{ wallet.cuttedAddress || 'No Wallet' }}</span>
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      style="height: 24px; margin-left: 2px"
-                      viewBox="0 0 20 20"
-                      fill="currentColor"
-                    >
-                      <path
-                        fill-rule="evenodd"
-                        d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
-                        clip-rule="evenodd"
-                      />
-                    </svg>
-                  </div>
-                  <template #overlay>
+                <!-- <a-dropdown placement="bottomCenter"> -->
+                <div
+                  :class="[$route.path?.includes('profile') && $route.name !== 'MyEggs' ? 'current-route' : '', 'me']"
+                  @click="$router.push({ name: 'MyNulls' })"
+                >
+                  <!-- <img class="avatar" src="/home@1x.png" /> -->
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    class="h-9 w-9"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                  >
+                    <path
+                      fill-rule="evenodd"
+                      d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-6-3a2 2 0 11-4 0 2 2 0 014 0zm-2 4a5 5 0 00-4.546 2.916A5.986 5.986 0 0010 16a5.986 5.986 0 004.546-2.084A5 5 0 0010 11z"
+                      clip-rule="evenodd"
+                    />
+                  </svg>
+                  <span class="username">{{ wallet.cuttedAddress || 'No Wallet' }}</span>
+                  <!-- <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    style="height: 24px; margin-left: 2px"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                  >
+                    <path
+                      fill-rule="evenodd"
+                      d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+                      clip-rule="evenodd"
+                    />
+                  </svg>-->
+                </div>
+                <!-- <template #overlay>
                     <custom-dropdown>
                       <li v-for="item in menuItems" :key="item" @click="navigateTo(item)">
                         <div>{{ item.text }}</div>
                       </li>
                     </custom-dropdown>
                   </template>
-                </a-dropdown>
+                </a-dropdown>-->
               </div>
             </div>
           </div>
@@ -50,7 +68,7 @@
             <div class="ml-4 mt-5 flex items-center">
               <button
                 @click="navigateTo({ name: 'MyEggs' })"
-                class="nav-button-vertical nav-pop-button"
+                :class="[$route.name === 'MyEggs' ? 'current-route' : '', 'nav-button-vertical', 'nav-pop-button']"
               >
                 <img class="nav-button-image" src="/eggs-kira.png" />
                 <span class="px-2">EGGS</span>
@@ -129,9 +147,26 @@ export default {
 </script>
 
 <style scoped>
+.current-route {
+  background-color: #FEF9E74D;
+  filter: brightness(1.05);
+  transform: scale(1.1);
+  box-shadow: 0 0 30px #fef9e74D;
+}
+
 .nav-pop-button {
-  transition: 0.2s cubic-bezier(0.19, 1, 0.22, 1);
+  transition: 0.2s ease; /* 0.2s cubic-bezier(0.19, 1, 0.22, 1); */
   border-radius: 20px;
+}
+
+.nav-button {
+  padding: 6px 6px 6px 13px;
+  font-size: 18px;
+  font-weight: 400;
+  color: #ffbb15;
+  line-height: 26px;
+  text-shadow: 2px 2px 1px black;
+  user-select: none;
 }
 
 button {
@@ -143,10 +178,12 @@ button {
 .nav-pop-button:hover {
   transform: scale(1.2);
   filter: brightness(1.1);
+  /* background-color: #ffffff33; */
 }
 
 .nav-pop-button:active {
-  transform: scale(1.1);
+  /* transform: scale(1.1); */
+  transform: translateY(5px);
   filter: brightness(0.9);
 }
 
@@ -168,16 +205,6 @@ button {
 
 .logo img {
   height: 63px;
-}
-
-.nav-button {
-  padding: 10px 14px;
-  font-size: 18px;
-  font-weight: 400;
-  color: #ffbb15;
-  line-height: 26px;
-  text-shadow: 2px 2px 1px black;
-  user-select: none;
 }
 
 .with-font {
@@ -212,11 +239,21 @@ button {
   font-weight: 400;
   color: #00367f;
   cursor: pointer;
+  user-select: none;
   transition: 0.2s ease;
+  padding: 8px;
+  border-radius: 20px;
 }
 
 .me:hover {
   text-shadow: 0 2px 8px rgb(0 0 0 / 35%);
+  transform: scale(1.1);
+  /* background-color: #ffffff33; */
+}
+
+.me:active {
+  /* transform: scale(0.95); */
+  transform: translateY(5px);
 }
 
 .avatar {
@@ -227,7 +264,7 @@ button {
 }
 
 .username {
-  margin-left: 15px;
+  margin-left: 8px;
   font-size: 14px;
   font-weight: bold;
 }

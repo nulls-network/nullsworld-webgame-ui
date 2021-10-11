@@ -1,13 +1,18 @@
 import Home from '@/views/Dashboard/Home.vue'
 import RecentTrading from '@/views/Dashboard/RecentTrading.vue'
 import RecentCombat from '@/views/Dashboard/RecentCombat.vue'
+
 import ArenaHome from '@/views/Arena/ArenaHome.vue'
+
 import MarketHome from '@/views/Market/MarketHome.vue'
 import MarketNullsInfo from '@/views/Market/MarketNullsInfo.vue'
+
+import Profile from '@/views/Me/Profile.vue'
 import MyNulls from '@/views/Me/MyNulls.vue'
 import MyEggs from '@/views/Me/MyEggs.vue'
 import MyCombatRecords from '@/views/Me/MyCombatRecords.vue'
 import MyTransactionHistory from '@/views/Me/MyTransactionHistory.vue'
+
 import NullsDetails from '@/views/Common/NullsDetails.vue'
 
 
@@ -62,11 +67,34 @@ export const routes = [
   },
   // Me ----------------------------
   {
-    name: 'MyNulls',
-    path: '/profile/nulls',
-    component: MyNulls,
-    // component: () => import('@/views/Me/MyNulls.vue'),
-    meta: { title: 'MyNulls' }
+    name: 'Profile',
+    path: '/profile',
+    component: Profile,
+    // component: () => import('@/views/Me/Profile.vue'),
+    meta: { title: 'Profile' },
+    children: [
+      {
+        name: 'MyNulls',
+        path: 'nulls',
+        component: MyNulls,
+        // component: () => import('@/views/Me/MyNulls.vue'),
+        meta: { title: 'MyNulls' }
+      },
+      {
+        name: 'MyCombatRecords',
+        path: 'combat-records',
+        component: MyCombatRecords,
+        // component: () => import('@/views/Me/MyCombatRecords.vue'),
+        meta: { title: 'MyCombatRecords' }
+      },
+      {
+        name: 'MyTransactionHistory',
+        path: 'transation-history',
+        component: MyTransactionHistory,
+        // component: () => import('@/views/Me/MyTransactionHistory.vue'),
+        meta: { title: 'MyTransactionHistory' }
+      },
+    ]
   },
   {
     name: 'MyEggs',
@@ -74,20 +102,6 @@ export const routes = [
     component: MyEggs,
     // component: () => import('@/views/Me/MyEggs.vue'),
     meta: { title: 'MyEggs' }
-  },
-  {
-    name: 'MyCombatRecords',
-    path: '/profile/combat-records',
-    component: MyCombatRecords,
-    // component: () => import('@/views/Me/MyCombatRecords.vue'),
-    meta: { title: 'MyCombatRecords' }
-  },
-  {
-    name: 'MyTransactionHistory',
-    path: '/profile/transation-history',
-    component: MyTransactionHistory,
-    // component: () => import('@/views/Me/MyTransactionHistory.vue'),
-    meta: { title: 'MyTransactionHistory' }
   },
   // Common Components ----------------------------
   {

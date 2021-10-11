@@ -32,9 +32,9 @@ import zhCN from 'ant-design-vue/lib/locale-provider/zh_CN'
 import enUS from 'ant-design-vue/lib/locale-provider/en_US'
 
 // Layouts
-import TopNavbar from './layouts/TopNavbar.vue'
-import MainContent from './layouts/MainContent.vue'
-import FooterBar from './layouts/FooterBar.vue'
+import TopNavbar from '@/layouts/TopNavbar.vue'
+import MainContent from '@/layouts/MainContent.vue'
+import FooterBar from '@/layouts/FooterBar.vue'
 
 // Modal components
 import CustomModal from '@/components/Common/CustomModal.vue'
