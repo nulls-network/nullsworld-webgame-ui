@@ -1,5 +1,9 @@
 import { createRouter, createWebHashHistory } from 'vue-router'
 import { routes } from './routes'
+import { loadLanguageAsync } from '@/locales'
+import { getStore } from '@/utils/common'
+
+let onceLoadI18nLang = loadLanguageAsync.bind(this)
 
 const newRouter = (emitter) => {
   const router = createRouter({
@@ -9,7 +13,12 @@ const newRouter = (emitter) => {
       window.scroll({ top: 0, left: 0 })
     }
   })
-  router.beforeEach((to, from, next) => {
+  router.beforeEach(async (to, from, next) => {
+    // 异步获取国际化语言
+    if (onceLoadI18nLang) {
+      await onceLoadI18nLang(getStore('lang'))
+    }
+    onceLoadI18nLang = null
     emitter.emit('navChange', to?.meta)
     next()
   })

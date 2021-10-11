@@ -1,8 +1,14 @@
 <template>
-  <main :class="mainClass" style="min-width: 1280px !important;">
-    <transition name="slide-left" mode="out-in">
-      <router-view />
-    </transition>
+  <main :class="mainClass" style="min-width: 1280px !important">
+    <!-- <transition name="slide-left" mode="out-in">
+      <router-view></router-view>
+    </transition> -->
+
+    <router-view v-slot="{ Component }">
+      <transition name="slide-left" mode="out-in">
+        <component :is="Component" />
+      </transition>
+    </router-view>
   </main>
 </template>
 

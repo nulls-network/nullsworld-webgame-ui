@@ -1,6 +1,7 @@
 // Functions
 import { createApp, markRaw, computed } from 'vue'
 import { newRouter } from '@/router'
+import i18n from '@/locales' // 引入国际化
 import { createPinia } from 'pinia'
 import mitt from 'mitt'
 import { axios } from '@/backends/base'
@@ -9,7 +10,6 @@ import { vfmPlugin } from 'vue-final-modal'
 // Pina Stores
 import { useWallet } from '@/stores/wallet'
 import { useParamStore } from '@/stores/paramStore'
-
 
 // Components
 import App from '@/App.vue'
@@ -27,7 +27,8 @@ import {
   Dropdown,
   Menu,
   MenuItem,
-  Checkbox
+  Checkbox,
+  ConfigProvider
 } from 'ant-design-vue'
 import ColorButton from '@/components/Common/ColorButton.vue'
 import CustomDropdown from '@/components/Common/CustomDropdown.vue'
@@ -52,6 +53,7 @@ pinia.use(() => ({
 app.use(pinia)
 app.use(router)
 app.use(vfmPlugin)
+app.use(i18n)
 
 // Use Components
 app.use(Radio)
@@ -66,6 +68,7 @@ app.use(Dropdown)
 app.use(Menu)
 app.use(MenuItem)
 app.use(Checkbox)
+app.use(ConfigProvider)
 app.component('ColorButton', ColorButton)
 app.component('CustomDropdown', CustomDropdown)
 app.component('NeedWalletConnect', NeedWalletConnect)

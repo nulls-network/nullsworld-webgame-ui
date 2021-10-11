@@ -1,28 +1,35 @@
 <template>
-  <top-navbar />
-  <main-content />
-  <footer-bar />
-  <custom-modal v-model="showModal" :click-to-close="clickToClose">
-    <Help v-if="contentSwitcher('help')" />
-    <BuyEggs key="GlobalModal-BuyEggs" v-else-if="contentSwitcher('buyEggs')" />
-    <OpenEggs key="GlobalModal-OpenEggs" v-else-if="contentSwitcher('hatchEggs')" />
-    <CreateArena key="GlobalModal-CreateArena" v-else-if="contentSwitcher('createArena')" />
-    <SelectNullsArena
-      key="GlobalModal-SelectNullsArena"
-      v-else-if="contentSwitcher('selectNullsArena')"
-    />
-    <!-- <SelectNullsCombat v-else-if="contentSwitcher('selectNullsCombat')" /> -->
-  </custom-modal>
-  <custom-modal v-model="showWalletConnect">
-    <WalletConnect />
-  </custom-modal>
-  <back-top>
-    <div class="ant-back-top-inner">↑</div>
-  </back-top>
+  <a-config-provider :locale="locale">
+    <top-navbar />
+    <main-content />
+    <footer-bar />
+    <custom-modal v-model="showModal" :click-to-close="clickToClose">
+      <Help v-if="contentSwitcher('help')" />
+      <BuyEggs key="GlobalModal-BuyEggs" v-else-if="contentSwitcher('buyEggs')" />
+      <OpenEggs key="GlobalModal-OpenEggs" v-else-if="contentSwitcher('hatchEggs')" />
+      <CreateArena
+        key="GlobalModal-CreateArena"
+        v-else-if="contentSwitcher('createArena')"
+      />
+      <SelectNullsArena
+        key="GlobalModal-SelectNullsArena"
+        v-else-if="contentSwitcher('selectNullsArena')"
+      />
+      <!-- <SelectNullsCombat v-else-if="contentSwitcher('selectNullsCombat')" /> -->
+    </custom-modal>
+    <custom-modal v-model="showWalletConnect">
+      <WalletConnect />
+    </custom-modal>
+    <back-top>
+      <div class="ant-back-top-inner">↑</div>
+    </back-top>
+  </a-config-provider>
 </template>
 
 <script>
 import { BackTop } from 'ant-design-vue'
+import zhCN from 'ant-design-vue/lib/locale-provider/zh_CN'
+import enUS from 'ant-design-vue/lib/locale-provider/en_US'
 
 // Layouts
 import TopNavbar from './layouts/TopNavbar.vue'
@@ -31,7 +38,6 @@ import FooterBar from './layouts/FooterBar.vue'
 
 // Modal components
 import CustomModal from '@/components/Common/CustomModal.vue'
-
 
 // Modal contents
 import BuyEggs from '@/components/ModalContents/BuyEggs.vue'
@@ -43,6 +49,7 @@ import SelectNullsArena from '@/components/ModalContents/SelectNullsArena.vue'
 import SelectNullsCombat from '@/components/ModalContents/SelectNullsCombat.vue'
 
 import { GLOBAL_WALLET_CONNECTING_KEY } from '@/utils/constants'
+import { getStore } from '@/utils/common'
 
 export default {
   components: {
@@ -80,11 +87,14 @@ export default {
           placement: 'bottomLeft',
           key: GLOBAL_WALLET_CONNECTING_KEY
         })
-      }
-      else if (newVal === false) {
+      } else if (newVal === false) {
         this.$notification.open({
-          message: this.wallet.connected ? 'Wallet is conneted ✔️' : 'Wallet not connected ❌',
-          description: this.wallet.connected ? `You are connected to the ${this.wallet.connectedWallet}.` : 'Wallet connect failed.',
+          message: this.wallet.connected
+            ? 'Wallet is conneted ✔️'
+            : 'Wallet not connected ❌',
+          description: this.wallet.connected
+            ? `You are connected to the ${this.wallet.connectedWallet}.`
+            : 'Wallet connect failed.',
           duration: 2,
           placement: 'bottomLeft',
           key: GLOBAL_WALLET_CONNECTING_KEY
@@ -92,8 +102,21 @@ export default {
       }
     }
   },
+  setup() {
+    // 语言包
+    const langPackage = {
+      'zh-cn': zhCN,
+      'en-us': enUS
+    }
+
+    const lang = getStore('lang')
+
+    return {
+      locale: langPackage[lang.includes('zh-cn', 'en-us') ? lang : 'en-us']
+    }
+  },
   async created() {
-    if (!this.wallet.connected) this.wallet.init().catch(() => { })
+    if (!this.wallet.connected) this.wallet.init().catch(() => {})
     this.removeLoadingPage()
   },
   methods: {
@@ -111,7 +134,7 @@ export default {
       return this.modalContent === contentKey
     },
     openGlobalModal(contentKey) {
-      if (contentKey === 'walletConnect') return this.showWalletConnect = true
+      if (contentKey === 'walletConnect') return (this.showWalletConnect = true)
       clearTimeout(this.closingTimeout)
       this.modalContent = contentKey
       this.showModal = true
@@ -131,6 +154,4 @@ export default {
     }
   }
 }
-
 </script>
-
