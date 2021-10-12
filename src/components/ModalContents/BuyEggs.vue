@@ -159,7 +159,6 @@
 
 <script>
 import { NullsEggManager, CONTRACT_ADDRESS } from '@/contracts'
-import { BigNumber } from 'ethers'
 import { addDecimal, formatNumber, removeDecimal, guid, calcApproveAmount } from '@/utils/common'
 
 import { LoadingOutlined } from '@ant-design/icons-vue'
@@ -288,9 +287,7 @@ export default {
       const title = (t) => `BuyEggs: ${t}`
 
       // Check allowance
-      const ALLOWANCE = calcApproveAmount(this.tokenDecimal)
       const allowance = await this.tokenContract['allowance'](this.wallet.address, CONTRACT_ADDRESS.TransferProxy)
-
 
       // GasLimit
       /* const needGasLimit = !!tokenContract.signer
@@ -299,7 +296,7 @@ export default {
       } */
 
       // Approve if need
-      if (allowance.lt(ALLOWANCE)) {
+      if (allowance.lt(addDecimal(this.eggAmount * this.unitPrice, this.tokenDecimal))) {
         this.approving = true
         this.$notification.open({
           message: title('Approving Required ❗'),
@@ -308,7 +305,7 @@ export default {
           duration: 0,
           key: TIPS_KEY
         })
-        const approveAmount = addDecimal(ALLOWANCE, this.tokenDecimal).toString()
+        const approveAmount = addDecimal(calcApproveAmount(this.tokenDecimal), this.tokenDecimal).toString()
         try {
           const approveTx = await this.tokenContract['approve'](CONTRACT_ADDRESS.TransferProxy, approveAmount)
           this.$notification.open({
