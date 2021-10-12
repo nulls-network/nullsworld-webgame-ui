@@ -2,9 +2,7 @@
   <a-spin tip="Loading..." :spinning="approving || hatching">
     <div class="eggs-container">
       <div class="eggs-title">Hatch eggs</div>
-      <div class="eggs-introduce">
-        nulls will treat the first person they see as a parent
-      </div>
+      <div class="eggs-introduce">nulls will treat the first person they see as a parent</div>
       <NeedWalletConnect
         @onWalletConnect="init"
         @onAddressChange="init"
@@ -32,8 +30,7 @@
                 }"
                 v-for="quantityItem in quantityList"
                 :key="quantityItem.label"
-                >{{ quantityItem.label }}</span
-              >
+              >{{ quantityItem.label }}</span>
             </div>
             <input
               v-model="quantity"
@@ -59,23 +56,19 @@
               !wallet.connected || zeroEggs || insufficientEggs || approving || hatching
             "
           >
-            <LoadingOutlined
-              v-show="approving || hatching"
-              class="px-2 font-bold"
-              spin
-            />
+            <LoadingOutlined v-show="approving || hatching" class="px-2 font-bold" spin />
             {{
               !wallet.connected
                 ? 'Wallet Not Connected'
                 : insufficientEggs
-                ? 'Insufficient Eggs'
-                : zeroEggs
-                ? 'Number of eggs cannot be 0'
-                : approving
-                ? 'Approving...'
-                : hatching
-                ? 'Hatching...'
-                : `Hatch ${openEggAmount} Eggs`
+                  ? 'Insufficient Eggs'
+                  : zeroEggs
+                    ? 'Number of eggs cannot be 0'
+                    : approving
+                      ? 'Approving...'
+                      : hatching
+                        ? 'Hatching...'
+                        : `Hatch ${openEggAmount} Eggs`
             }}
           </color-button>
         </div>
@@ -85,11 +78,10 @@
 </template>
 
 <script>
-import { NullsEggToken, NullsEggManager } from '@/contracts'
-import { BigNumber } from 'ethers'
-import { addDecimal, formatNumber, removeDecimal } from '@/utils/common'
+import { NullsEggToken, NullsEggManager, CONTRACT_ADDRESS } from '@/contracts'
+import { addDecimal, formatNumber, removeDecimal, calcApproveAmount } from '@/utils/common'
 import { MyEggs } from '@/backends'
-import { h } from 'vue'
+import { markRaw, h } from 'vue'
 import { CheckCircleTwoTone, LoadingOutlined } from '@ant-design/icons-vue'
 import { WALLET_ERRORS, WALLET_TIPS } from '@/utils/wallet/constants'
 
@@ -118,8 +110,8 @@ export default {
       openEggAmount: 1,
 
       eggBalance: 0,
-      eggContract: undefined,
-      eggManagerContract: undefined,
+      eggContract: markRaw({}),
+      eggManagerContract: markRaw({}),
       updateBalanceInterval: undefined
     }
   },
@@ -165,8 +157,17 @@ export default {
       clearInterval(this.updateBalanceInterval)
 
       // Create contracts
-      this.eggContract = this.wallet.createContract(NullsEggToken)
-      this.eggManagerContract = this.wallet.createContract(NullsEggManager)
+      this.eggContract = markRaw(this.wallet.createContract(NullsEggToken))
+      this.eggManagerContract = markRaw(this.wallet.createContract(NullsEggManager))
+
+      this.eggManagerContract.on('EggNewNonce', (...args) => {
+        const event = args.slice(-1)
+        console.log('EggNewNonce event:', event)
+      })
+      this.eggManagerContract.on('NewPet', (...args) => {
+        const event = args.slice(-1)
+        console.log('NewPet event:', event)
+      })
 
       await this.updateEggBalance()
       this.updateBalanceInterval = setInterval(this.updateEggBalance, 10_000)
@@ -196,14 +197,10 @@ export default {
       if (!this.eggBalance) return
 
       // Check allowance
-      const ALLOWANCE = BigNumber.from(1_000_000_000)
-      const allowance = await this.eggContract['allowance'](
-        this.wallet.address,
-        NullsEggManager.address
-      )
+      const allowance = await this.eggContract['allowance'](this.wallet.address, CONTRACT_ADDRESS.TransferProxy)
 
       // Approve if need
-      if (allowance < ALLOWANCE) {
+      if (allowance.lt(this.openEggAmount)) {
         this.approving = true
         let hiedeApprovingHint = this.$message.loading({
           content: 'Approving required, waiting for your approval',
@@ -212,8 +209,8 @@ export default {
         })
         try {
           const approveTx = await this.eggContract['approve'](
-            NullsEggManager.address,
-            ALLOWANCE
+            CONTRACT_ADDRESS.TransferProxy,
+            calcApproveAmount()
           )
           hiedeApprovingHint = this.$message.loading({
             content: WALLET_TIPS.txSend,
@@ -236,6 +233,7 @@ export default {
             WALLET_ERRORS[err.code] || err.data?.message || err.message
           )
           this.approving = false
+          return
         }
       }
 
@@ -253,7 +251,7 @@ export default {
       try {
         const openEggsTx = await this.eggManagerContract['openMultiple'](
           this.openEggAmount,
-          itemId,
+          /* itemId: */ 8,
           deadline
         )
         hideOpeningHint = this.$message.loading({
