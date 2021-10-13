@@ -116,7 +116,7 @@
           <color-button
             @click="handlePurchase"
             :disabled="
-              !wallet.connected || insufficientBalance || approving || purchasing
+              !wallet.connected || insufficientBalance || zeroEggs || approving || purchasing
             "
           >
             <LoadingOutlined v-show="approving || purchasing" class="px-2 font-bold" spin />
@@ -125,13 +125,15 @@
                 ? 'Wallet Not Connected'
                 : insufficientBalance
                   ? `Insufficient ${tokenSymbol} Balance`
-                  : approving
-                    ? 'Approving...'
-                    : purchasing
-                      ? 'purchasing...'
-                      : `Purchase ${eggAmount} Eggs With ${formatNumber(
-                        totalPrice
-                      )} ${tokenSymbol}`
+                  : zeroEggs
+                    ? 'Number of eggs cannot be 0'
+                    : approving
+                      ? 'Approving...'
+                      : purchasing
+                        ? 'purchasing...'
+                        : `Purchase ${eggAmount} Eggs With ${formatNumber(
+                          totalPrice
+                        )} ${tokenSymbol}`
             }}
           </color-button>
         </div>
@@ -145,7 +147,6 @@ import { NullsEggManager } from '@/contracts'
 import { addDecimal, formatNumber, removeDecimal, guid } from '@/utils/common'
 
 import { LoadingOutlined } from '@ant-design/icons-vue'
-import { WALLET_ERRORS, WALLET_TIPS } from '@/utils/wallet/constants'
 
 export default {
   components: {
@@ -221,6 +222,9 @@ export default {
     },
     tokenDecimal() {
       return this.contractTokenDecimal || this.currentToken.decimal
+    },
+    zeroEggs() {
+      return this.buyEggAmount < 1
     },
     quantityList() {
       return [
