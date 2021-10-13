@@ -103,15 +103,11 @@
 </template>
 
 <script>
-import { NullsPetToken, NullsWorldMarket } from '@/contracts'
-import { addDecimal, formatNumber, removeDecimal, calcColor } from '@/utils/common'
-import { h } from 'vue'
+import { NullsPetToken } from '@/contracts'
+import { addDecimal, formatNumber, removeDecimal, calcColor, guid } from '@/utils/common'
 
 import NullsPreview from '@/components/Items/NullsPreview.vue'
-import { CheckCircleTwoTone, LoadingOutlined } from '@ant-design/icons-vue'
-import { WALLET_ERRORS, WALLET_TIPS } from '@/utils/wallet/constants'
-
-const ITEM_KEY = 'nulls.online-play'
+import { LoadingOutlined } from '@ant-design/icons-vue'
 
 
 export default {
@@ -195,7 +191,6 @@ export default {
       clearInterval(this.updateBalanceInterval)
 
       // Create contracts
-      this.marketContract = this.wallet.createContract(NullsWorldMarket)
       this.petContract = this.wallet.createContract(NullsPetToken)
       this.subscribeToken()
     },
@@ -220,61 +215,32 @@ export default {
     },
     async handleSell() {
       if (!this.item.pet_id) return
-
       const nullsId = this.item.pet_id
 
-      // Check approved
-      const approvedAddress = (await this.petContract['getApproved'](nullsId)).toLowerCase()
-      if (approvedAddress !== NullsWorldMarket.address.toLowerCase()) {
-        this.approving = true
-        let hiedeApprovingHint = this.$message.loading({ content: 'Approving required, waiting for your approval', key: 'approving', duration: 0 })
-        try {
-          const approveTx = await this.petContract['approve'](NullsWorldMarket.address, nullsId)
-          hiedeApprovingHint = this.$message.loading({ content: WALLET_TIPS.txSend, key: 'approving', duration: 0 })
-          await approveTx.wait().then(receipt => {
-            console.log(receipt)
-            if (receipt.status === 1) {
-              console.log(`================approveTx=================`)
-              this.$message.success('Successful approve!')
-              hiedeApprovingHint()
-              this.approving = false
-            }
-          })
-        } catch (err) {
-          hiedeApprovingHint()
-          console.error(err)
-          this.$message.error(WALLET_ERRORS[err.code] || err.data?.message || err.message)
-          this.approving = false
-        }
-      }
+      const handle = 'SellPet'
+      const key = `${handle}-${guid()}`
+      const title = (t) => `${handle}: ${t}`
 
-      // Handle sell
-      let hideSelling = this.$message.loading({ content: 'Awaiting approval of transaction', key: 'selling', duration: 0 })
-      this.selling = true
-      try {
-        const soldTx = await this.marketContract['sellPet'](nullsId, this.tokenAddress, addDecimal(this.price, this.tokenDecimals).toString())
-        hideSelling = this.$message.loading({ content: WALLET_TIPS.txSend, key: 'selling', duration: 0 })
-        await soldTx.wait().then(receipt => {
-          console.log(receipt)
-          if (receipt.status === 1) {
-            console.log(`===============soldTx==================`)
-            this.selling = false
-            hideSelling()
-            this.updateBalance()
-            this.$notification.open({
-              message: 'Nulls now listing in the market',
-              description: `Successfully listing Nulls #${nullsId} in the market.`,
-              icon: h(CheckCircleTwoTone, { twoToneColor: '#52c41a' }),
-            })
-            this.$root.closeGlobalModal()
-          }
-        })
-      } catch (err) {
-        hideSelling()
-        console.error(err)
-        this.$message.error(WALLET_ERRORS[err.code] || err.data?.message || err.message)
-        this.selling = false
-      }
+      // Sell
+      await this.wallet.handleTranscation(async () => {
+        return await this.petContract['sellPet'](nullsId, this.tokenAddress, addDecimal(this.price, this.tokenDecimals))
+      }, {
+        key,
+        title,
+        component: this,
+        statusProps: 'selling',
+        onComplete: () => {
+          this.updateBalance()
+          this.$emit('onSellComplete')
+        },
+        messages: {
+          startTitle: `Selling Nulls #${nullsId} 📑`,
+          waitingTitle: 'Waiting for transcations result 📑',
+          successTitle: `Successful listing Nulls #${nullsId} ✔️`,
+          successContent: `Nulls #${nullsId} now listing in the market!`,
+          errorTitle: 'Selling failed ❌'
+        }
+      })
     },
     selectToken(idx) {
       this.selectedTokenIndex = idx

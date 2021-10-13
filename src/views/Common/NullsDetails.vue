@@ -144,7 +144,7 @@
     </div>
   </div>
   <custom-modal v-model="showSoldModal" :click-to-close="true">
-    <SoldOnMarket v-if="renderNullsSold" :key="`${nullsId}-nulls-sold`" :item="pet" />
+    <SoldOnMarket @onSellComplete="onSellComplete" v-if="renderNullsSold" :key="`${nullsId}-nulls-sold`" :item="pet" />
   </custom-modal>
 </template>
 
@@ -221,6 +221,10 @@ export default {
     },
     goback() {
       this.$router.back(-1)
+    },
+    onSellComplete() {
+      this.goback()
+      this.showSoldModal = false
     },
     combatColor(record) {
       const { cAddr, gAddr } = recordAddrs(record)
