@@ -158,14 +158,12 @@
 import CustomModal from '@/components/Common/CustomModal.vue'
 import MarketBuy from '@/components/ModalContents/MarketBuy.vue'
 
-import { calcColor, calcNullsImage, removeDecimal, formatDate, txExplorer, accountExplorer, cutEthAddress, formatNumber } from '@/utils/common'
+import { calcColor, calcNullsImage, removeDecimal, formatDate, txExplorer, accountExplorer, cutEthAddress, formatNumber, guid } from '@/utils/common'
 import { Trading } from '@/backends'
 import empty from '@/components/Common/EmptyStatus.vue'
 import NullsPreview from '@/components/Items/NullsPreview.vue'
-import { h } from 'vue'
 import { CheckCircleTwoTone } from '@ant-design/icons-vue'
-import { WALLET_ERRORS } from '@/utils/wallet/constants'
-import { NullsWorldMarket } from '@/contracts'
+import { NullsPetToken } from '@/contracts'
 
 
 
@@ -238,7 +236,7 @@ export default {
     initContract() {
       if (!this.wallet.connected) return
       // Create contracts
-      this.marketContract = this.wallet.createContract(NullsWorldMarket)
+      this.petTokenContract = this.wallet.createContract(NullsPetToken)
     },
     async fetchData() {
       this.fetching = true
@@ -275,29 +273,32 @@ export default {
       return record.value
     },
     async handleCancelSale() {
-      this.canceling = true
-      let hideUnSell = this.$message.loading({ content: 'Cancel selling...', key: 'cancel_cell', duration: 0 })
-      try {
-        const unsellPetTx = await this.marketContract['unSellPet'](this.pet?.pet_id)
-        await unsellPetTx.wait().then(receipt => {
-          if (receipt.status === 1) {
-            console.log(`================unsellPetTx=================`)
-            this.canceling = false
-            this.$notification.open({
-              message: 'Successful cancel',
-              description: `Successfully cancel Nulls #${this.pet.pet_id}`,
-              icon: h(CheckCircleTwoTone, { twoToneColor: '#52c41a' }),
-            })
-            this.$router.back(-1)
-          }
-          hideUnSell()
-        })
-      } catch (err) {
-        hideUnSell()
-        console.error(err)
-        this.$message.error(WALLET_ERRORS[err.code] || err.data?.message || err.message)
-        this.canceling = false
-      }
+      if (!this.pet?.pet_id) return
+      const nullsId = this.pet?.pet_id
+
+      const handle = 'CancelSelling'
+      const key = `${handle}-${guid()}`
+      const title = (t) => `${handle}: ${t}`
+
+      // Sell
+      await this.wallet.handleTranscation(async () => {
+        return await this.petTokenContract['unSellPet'](nullsId)
+      }, {
+        key,
+        title,
+        component: this,
+        statusProps: 'canceling',
+        onComplete: () => {
+          this.$router.back(-1)
+        },
+        messages: {
+          startTitle: `Unlisting Nulls #${nullsId} 📑`,
+          waitingTitle: 'Waiting for transcations result 📑',
+          successTitle: `Successful unlisting Nulls #${nullsId} ✔️`,
+          successContent: `Nulls #${nullsId} now unlisted.`,
+          errorTitle: 'Unlisting failed ❌'
+        }
+      })
     },
     openLink(tx) {
       window.open(txExplorer(tx.tx_hash), "_blank")
