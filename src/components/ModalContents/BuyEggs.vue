@@ -14,15 +14,12 @@
           <a-dropdown :trigger="['click']" placement="bottomCenter">
             <div class="token-select">
               <div class="token-select-left">
-                <img
-                  class="token-icon"
-                  :src="`/tokens/${tokenSymbol.toLowerCase()}.svg`"
-                />
+                <img class="token-icon" :src="`/tokens/${tokenSymbol.toLowerCase()}.svg`" />
                 <div class="token-select-content">
                   <div class="token-symbol">{{ tokenSymbol }}</div>
-                  <div class="token-select-balance">
-                    Balance: {{ formatNumber(tokenBalance) }} {{ tokenSymbol }}
-                  </div>
+                  <div
+                    class="token-select-balance"
+                  >Balance: {{ formatNumber(tokenBalance) }} {{ tokenSymbol }}</div>
                 </div>
               </div>
               <div>
@@ -42,16 +39,9 @@
             </div>
             <template #overlay>
               <div class="select-token-dropdown">
-                <li
-                  v-for="(t, idx) in tokens"
-                  :key="t.address"
-                  @click="selectToken(idx)"
-                >
+                <li v-for="(t, idx) in tokens" :key="t.address" @click="selectToken(idx)">
                   <div class="flex">
-                    <img
-                      class="token-icon"
-                      :src="`/tokens/${t.symbol.toLowerCase()}.svg`"
-                    />
+                    <img class="token-icon" :src="`/tokens/${t.symbol.toLowerCase()}.svg`" />
                     <div>
                       <div class="font-bold">{{ t.symbol }}</div>
                       <div style="font-size: 12px">{{ t.address }}</div>
@@ -63,9 +53,7 @@
           </a-dropdown>
         </div>
         <div>
-          <div class="py-2 font-bold" style="font-size: 16px">
-            Eggs quantity (Default: 1)
-          </div>
+          <div class="py-2 font-bold" style="font-size: 16px">Eggs quantity (Default: 1)</div>
 
           <div class="flex egg-count-inner">
             <div class="flex" @click="handleClickQuantity">
@@ -75,8 +63,7 @@
                 }"
                 v-for="quantityItem in quantityList"
                 :key="quantityItem.label"
-                >{{ quantityItem.label }}</span
-              >
+              >{{ quantityItem.label }}</span>
             </div>
 
             <input
@@ -132,23 +119,19 @@
               !wallet.connected || insufficientBalance || approving || purchasing
             "
           >
-            <LoadingOutlined
-              v-show="approving || purchasing"
-              class="px-2 font-bold"
-              spin
-            />
+            <LoadingOutlined v-show="approving || purchasing" class="px-2 font-bold" spin />
             {{
               !wallet.connected
                 ? 'Wallet Not Connected'
                 : insufficientBalance
-                ? `Insufficient ${tokenSymbol} Balance`
-                : approving
-                ? 'Approving...'
-                : purchasing
-                ? 'purchasing...'
-                : `Purchase ${eggAmount} Eggs With ${formatNumber(
-                    totalPrice
-                  )} ${tokenSymbol}`
+                  ? `Insufficient ${tokenSymbol} Balance`
+                  : approving
+                    ? 'Approving...'
+                    : purchasing
+                      ? 'purchasing...'
+                      : `Purchase ${eggAmount} Eggs With ${formatNumber(
+                        totalPrice
+                      )} ${tokenSymbol}`
             }}
           </color-button>
         </div>
@@ -158,8 +141,8 @@
 </template>
 
 <script>
-import { NullsEggManager, CONTRACT_ADDRESS } from '@/contracts'
-import { addDecimal, formatNumber, removeDecimal, guid, calcApproveAmount } from '@/utils/common'
+import { NullsEggManager } from '@/contracts'
+import { addDecimal, formatNumber, removeDecimal, guid } from '@/utils/common'
 
 import { LoadingOutlined } from '@ant-design/icons-vue'
 import { WALLET_ERRORS, WALLET_TIPS } from '@/utils/wallet/constants'
@@ -286,58 +269,15 @@ export default {
       const TIPS_KEY = `buyEggs-${guid()}`
       const title = (t) => `BuyEggs: ${t}`
 
-      // Check allowance
-      const allowance = await this.tokenContract['allowance'](this.wallet.address, CONTRACT_ADDRESS.TransferProxy)
-
-      // GasLimit
-      /* const needGasLimit = !!tokenContract.signer
-      if (needGasLimit) {
-        const gasLimit = await tokenContract.estimateGas['approve'](utils.getAddress(CONTRACT_ADDRESS.TransferProxy), this.totalPrice, {})
-      } */
-
-      // Approve if need
-      if (allowance.lt(addDecimal(this.eggAmount * this.unitPrice, this.tokenDecimal))) {
-        this.approving = true
-        this.$notification.open({
-          message: title('Approving Required ❗'),
-          description:
-            'Your authorization is required to send the transaction, please go to your wallet to confirm...',
-          duration: 0,
-          key: TIPS_KEY
-        })
-        const approveAmount = addDecimal(calcApproveAmount(this.tokenDecimal), this.tokenDecimal).toString()
-        try {
-          const approveTx = await this.tokenContract['approve'](CONTRACT_ADDRESS.TransferProxy, approveAmount)
-          this.$notification.open({
-            message: title('Waiting for Approving...'),
-            description: WALLET_TIPS.txSend,
-            duration: 0,
-            key: TIPS_KEY
-          })
-          await approveTx.wait().then((receipt) => {
-            console.log(receipt)
-            if (receipt.status === 1) {
-              console.log(`================approveTx=================`)
-              this.$notification.open({
-                message: title('Successful approve ✔️'),
-                description: 'Successful approve.',
-                duration: 0,
-                key: TIPS_KEY
-              })
-              this.approving = false
-            }
-          })
-        } catch (err) {
-          console.error(err)
-          this.$notification.open({
-            message: title('Approving failed ❌'),
-            description: WALLET_ERRORS[err.code] || err.data?.message || err.message,
-            duration: 2,
-            key: TIPS_KEY
-          })
-          this.approving = false
-          return
-        }
+      if (!await this.wallet.approveContract(
+        this.tokenContract,
+        addDecimal(this.eggAmount * this.unitPrice, this.tokenDecimal), {
+        component: this,
+        key: TIPS_KEY,
+        title,
+        tokenDecimal: this.tokenDecimal
+      })) {
+        return
       }
 
       // Purchase eggs
@@ -572,17 +512,20 @@ export default {
 }
 
 .egg-count-inner {
+  margin-top: 2px;
+
   span {
     margin-right: 25px;
     width: 57px;
     height: 34px;
-    line-height: 34px;
+    line-height: 32px;
     color: #111;
     font-size: 18px;
     text-align: center;
     border-radius: 8px;
     border: 1px solid #aaa;
     cursor: pointer;
+    transition: .2s ease;
 
     &.active {
       color: #ff7427;
@@ -591,13 +534,14 @@ export default {
   }
 
   .quantity-input {
-    width: 57px;
+    width: 100px;
     height: 34px;
     padding: 5px 10px;
     font-size: 18px;
     border-radius: 8px;
     border: 1px solid #aaa;
     background: transparent;
+    font-weight: normal;
     text-align: center;
 
     &.active {

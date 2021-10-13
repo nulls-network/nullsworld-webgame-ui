@@ -2,13 +2,13 @@ import { ref, markRaw } from 'vue'
 import { defineStore } from 'pinia'
 import { Contract } from 'ethers'
 
-import { ERC20 } from '@/contracts'
+import { ERC20, CONTRACT_ADDRESS } from '@/contracts'
 
-import { cutEthAddress } from '@/utils/common'
+import { cutEthAddress, addDecimal, calcApproveAmount, guid } from '@/utils/common'
 import { WalletWatcher } from '@/utils/wallet/watcher'
 import { Metamask, WalletConnect } from '@/utils/wallet/connectors'
 import { findEvent } from '@/utils/wallet/utils'
-import { CHAIN_ID } from '@/utils/wallet/constants'
+import { CHAIN_ID, WALLET_TIPS, WALLET_ERRORS } from '@/utils/wallet/constants'
 
 
 export const useWallet = (app) => {
@@ -136,6 +136,73 @@ export const useWallet = (app) => {
                     app.config.globalProperties.$message.error(switchErr.message)
                 }
                 console.info('[Wallet Store] Chain switch end.')
+            },
+            approveContract(contract, targetAllowance, {
+                component,
+                key,
+                title,
+                tokenDecimal
+            }) {
+                if (!key) key = guid()
+                if (!title) title = (t) => `Approvement: ${t}`
+                if (!tokenDecimal) tokenDecimal = 6
+                return new Promise(async (resolve, _reject) => {
+                    // Check allowance
+                    const allowance = await contract['allowance'](this.address, CONTRACT_ADDRESS.TransferProxy)
+
+                    // Check approvement
+                    if (!allowance.lt(targetAllowance)) {
+                        return resolve(true)
+                    }
+
+                    // Approve if need
+                    if (component) component.approving = true
+                    app.config.globalProperties.$notification.open({
+                        message: title('Approving Required ❗'),
+                        description:
+                            'Your authorization is required to send the transaction, please go to your wallet to confirm...',
+                        duration: 0,
+                        key
+                    })
+
+                    try {
+                        const approveTx = await contract['approve'](
+                            CONTRACT_ADDRESS.TransferProxy,
+                            addDecimal(calcApproveAmount(tokenDecimal), tokenDecimal).toString()
+                        )
+                        app.config.globalProperties.$notification.open({
+                            message: title('Waiting for Approving...'),
+                            description: WALLET_TIPS.txSend,
+                            duration: 0,
+                            key
+                        })
+                        await approveTx.wait().then((receipt) => {
+                            console.log(receipt)
+                            if (receipt.status === 1) {
+                                console.log(`================approveTx=================`)
+                                app.config.globalProperties.$notification.open({
+                                    message: title('Successful approve ✔️'),
+                                    description: 'Successful approve.',
+                                    duration: 0,
+                                    key
+                                })
+                                if (component) component.approving = false
+                                return resolve(true)
+                            }
+                        })
+                    } catch (err) {
+                        console.error(err)
+                        app.config.globalProperties.$notification.open({
+                            message: title('Approving failed ❌'),
+                            description: WALLET_ERRORS[err.code] || err.data?.message || err.message,
+                            duration: 2,
+                            key
+                        })
+                        if (component) component.approving = false
+                        return resolve(false)
+                    }
+
+                })
             }
         }
     })()

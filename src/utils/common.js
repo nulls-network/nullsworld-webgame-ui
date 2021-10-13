@@ -10,7 +10,7 @@ export function cutEthAddress(address, bit = 6) {
 }
 
 export function calcApproveAmount(decimal) {
-  return BigNumber.from(10).pow(decimal + 18)
+  return BigNumber.from(10).pow((decimal || 6) + 18)
 }
 
 export function calcNullsImage(nullsId) {
