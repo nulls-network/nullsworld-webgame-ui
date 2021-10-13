@@ -21,7 +21,7 @@
         </div>
 
         <div class="egg-count-wrap mt-8">
-          <p class="title">Number of dinosaur eggs (default: 1)</p>
+          <p class="title">Hatch of pet eggs (default: 1)</p>
           <div class="flex egg-count-inner">
             <div class="flex" @click="handleClickQuantity">
               <span
@@ -78,12 +78,11 @@
 </template>
 
 <script>
-import { NullsEggToken, NullsEggManager, CONTRACT_ADDRESS } from '@/contracts'
-import { addDecimal, formatNumber, removeDecimal, calcApproveAmount } from '@/utils/common'
+import { NullsEggToken, NullsEggManager } from '@/contracts'
+import { addDecimal, formatNumber, removeDecimal, guid } from '@/utils/common'
 import { MyEggs } from '@/backends'
-import { markRaw, h } from 'vue'
-import { CheckCircleTwoTone, LoadingOutlined } from '@ant-design/icons-vue'
-import { WALLET_ERRORS, WALLET_TIPS } from '@/utils/wallet/constants'
+import { markRaw, } from 'vue'
+import { LoadingOutlined } from '@ant-design/icons-vue'
 
 export default {
   components: {
@@ -196,89 +195,50 @@ export default {
     async handleHatch() {
       if (!this.eggBalance) return
 
-      // Check allowance
-      const allowance = await this.eggContract['allowance'](this.wallet.address, CONTRACT_ADDRESS.TransferProxy)
+      const TIPS_KEY = `openEggs-${guid()}`
+      const title = (t) => `OpenEggs: ${t}`
 
-      // Approve if need
-      if (allowance.lt(this.openEggAmount)) {
-        this.approving = true
-        let hiedeApprovingHint = this.$message.loading({
-          content: 'Approving required, waiting for your approval',
-          key: 'approving',
-          duration: 0
-        })
-        try {
-          const approveTx = await this.eggContract['approve'](
-            CONTRACT_ADDRESS.TransferProxy,
-            calcApproveAmount()
-          )
-          hiedeApprovingHint = this.$message.loading({
-            content: WALLET_TIPS.txSend,
-            key: 'approving',
-            duration: 0
-          })
-          await approveTx.wait().then((receipt) => {
-            console.log(receipt)
-            if (receipt.status === 1) {
-              console.log(`================approveTx=================`)
-              this.$message.success('Successful approve!')
-              hiedeApprovingHint()
-              this.approving = false
-            }
-          })
-        } catch (err) {
-          hiedeApprovingHint()
-          console.error(err)
-          this.$message.error(
-            WALLET_ERRORS[err.code] || err.data?.message || err.message
-          )
-          this.approving = false
-          return
-        }
+      if (!await this.wallet.approveContract(this.eggContract, this.openEggAmount, {
+        component: this,
+        key: TIPS_KEY,
+        title
+      })) {
+        return
       }
 
       // Handle buy eggs
       const { itemId, deadline, err } = await this.readyOpenEggs()
-      if (err) return this.$message.error(err)
+      if (err) {
+        this.$notification.open({
+          message: title('Hatching failed ❌'),
+          description: 'Could not get itemId from GameServer, please try again.',
+          duration: 2,
+          key
+        })
+        return
+      }
 
       // Hatch
-      let hideOpeningHint = this.$message.loading({
-        content: 'Awaiting approval of transaction',
-        key: 'hatching',
-        duration: 0
-      })
-      this.hatching = true
-      try {
-        const openEggsTx = await this.eggManagerContract['openMultiple'](
+      await this.wallet.handleTranscation(async () =>
+        await this.eggManagerContract['openMultiple'](
           this.openEggAmount,
           /* itemId: */ 8,
           deadline
-        )
-        hideOpeningHint = this.$message.loading({
-          content: WALLET_TIPS.txSend,
-          key: 'hatching',
-          duration: 0
-        })
-        await openEggsTx.wait().then((receipt) => {
-          console.log(receipt)
-          if (receipt.status === 1) {
-            console.log(`===============openEggsTx==================`)
-            this.hatching = false
-            hideOpeningHint()
-            this.updateEggBalance()
-            this.$notification.open({
-              message: 'Successful hatching',
-              description: `Successful hatching of ${this.openEggAmount} eggs, please check in MyNulls!`,
-              icon: h(CheckCircleTwoTone, { twoToneColor: '#52c41a' })
-            })
-          }
-        })
-      } catch (err) {
-        hideOpeningHint()
-        console.error(err)
-        this.$message.error(WALLET_ERRORS[err.code] || err.data?.message || err.message)
-        this.hatching = false
-      }
+        ), {
+        key: TIPS_KEY,
+        title,
+        component: this,
+        statusProps: 'hatching',
+        onComplete: () => this.updateEggBalance(),
+        messages: {
+          startTitle: 'Hatching Eggs 📑',
+          waitingTitle: 'Waiting for Hatching result 📑',
+          successTitle: 'Successful Hatching ✔️',
+          successContent: `Successfully hatched ${this.openEggAmount} eggs, please check in MyNulls!`,
+          errorTitle: 'Hatching failed ❌'
+        }
+      })
+
     },
     quantityChange() {
       let value = this.quantity.replace(/[^\d]/g, '')
@@ -403,7 +363,7 @@ export default {
       margin-right: 25px;
       width: 57px;
       height: 34px;
-      line-height: 34px;
+      line-height: 32px;
       color: #111;
       font-size: 18px;
       text-align: center;
@@ -418,7 +378,7 @@ export default {
     }
 
     .quantity-input {
-      width: 57px;
+      width: 80px;
       height: 34px;
       padding: 5px 10px;
       font-size: 18px;
