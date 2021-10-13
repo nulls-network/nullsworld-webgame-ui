@@ -195,50 +195,38 @@ export default {
     async handleHatch() {
       if (!this.eggBalance) return
 
-      const TIPS_KEY = `openEggs-${guid()}`
-      const title = (t) => `OpenEggs: ${t}`
-
-      if (!await this.wallet.approveContract(this.eggContract, this.openEggAmount, {
-        component: this,
-        key: TIPS_KEY,
-        title
-      })) {
-        return
-      }
-
-      // Handle buy eggs
+      // Ready to hatch
       const { itemId, deadline, err } = await this.readyOpenEggs()
       if (err) {
         this.$notification.open({
-          message: title('Hatching failed ❌'),
-          description: 'Could not get itemId from GameServer, please try again.',
-          duration: 2,
-          key
+          message: 'OpenEggs: Hatching failed ❌',
+          description: err,
+          duration: 2
         })
         return
       }
 
       // Hatch
-      await this.wallet.handleTranscation(async () =>
-        await this.eggManagerContract['openMultiple'](
-          this.openEggAmount,
-          /* itemId: */ 8,
-          deadline
-        ), {
-        key: TIPS_KEY,
-        title,
+      await this.wallet.approveAndSend({
+        handle: 'OpenEggs',
+        approveContract: this.eggContract,
+        approveChecker: this.openEggAmount,
         component: this,
-        statusProps: 'hatching',
-        onComplete: () => this.updateEggBalance(),
-        messages: {
-          startTitle: 'Hatching Eggs 📑',
-          waitingTitle: 'Waiting for Hatching result 📑',
-          successTitle: 'Successful Hatching ✔️',
-          successContent: `Successfully hatched ${this.openEggAmount} eggs, please check in MyNulls!`,
-          errorTitle: 'Hatching failed ❌'
+        transcationFactory: async () => {
+          return await this.eggManagerContract['openMultiple'](this.openEggAmount, 8, deadline)
+        },
+        transcationOptions: {
+          statusProps: 'hatching',
+          onComplete: () => this.updateEggBalance(),
+          messages: {
+            startTitle: 'Hatching Eggs 📑',
+            waitingTitle: 'Waiting for Hatching result 📑',
+            successTitle: 'Successful Hatching ✔️',
+            successContent: `Successfully hatched ${this.openEggAmount} eggs, please check in MyNulls!`,
+            errorTitle: 'Hatching failed ❌'
+          }
         }
       })
-
     },
     quantityChange() {
       let value = this.quantity.replace(/[^\d]/g, '')

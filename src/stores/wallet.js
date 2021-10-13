@@ -254,7 +254,7 @@ export const useWallet = (global) => {
                         console.error(`${key} Tx Error:`, err)
                         global.$notification.open({
                             message: title(messages.errorTitle),
-                            description: messages.errorContent || WALLET_ERRORS[err.code] || err.data?.message || err.message,
+                            description: messages.errorContent || WALLET_ERRORS[err.code] || 'Transcations Failed, please try again.',
                             duration: 2,
                             key
                         })
