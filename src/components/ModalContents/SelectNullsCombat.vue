@@ -69,14 +69,14 @@
 </template>
 
 <script>
-import { MyNulls, Ring } from '@/backends'
-import { calcNullsImage, calcColor, addDecimal, guid, randChoiceNum } from '@/utils/common'
+import { markRaw } from 'vue'
+import { MyNulls } from '@/backends'
+import { calcNullsImage, calcColor, addDecimal, randChoiceNum, guid } from '@/utils/common'
+import { WALLET_ERRORS } from '@/utils/wallet/constants'
 import Nulls from '@/components/Items/NullsItem.vue'
 import NoNulls from '@/components/Items/NoNulls.vue'
 import { SyncOutlined } from '@ant-design/icons-vue'
-import { BigNumber } from 'ethers'
 import { NullsRankManager } from '@/contracts'
-import { WALLET_TIPS } from '@/utils/wallet/constants'
 
 
 
@@ -100,7 +100,10 @@ export default {
       combating: false,
       fetching: true,
       updateDataInterval: -1,
-      displayNulls: []
+      displayNulls: [],
+      combatTranscation: '',
+      requestKey: '',
+      combatKey: ''
     }
   },
   async created() {
@@ -122,8 +125,41 @@ export default {
       if (!this.wallet.connected) return
       clearInterval(this.updateDataInterval)
 
-      this.ringManagerContract = this.wallet.createContract(NullsRankManager)
-      this.tokenContract = this.wallet.createERC20(this.arena?.token)
+      this.tokenContract = markRaw(this.wallet.createERC20(this.arena?.token))
+      this.rankManagerContract = markRaw(this.wallet.createContract(NullsRankManager))
+
+      this.wallet.watchContractEvent(this.rankManagerContract, 'RankNewNonce', event => {
+        if (event?.transactionHash === this.combatTranscation) {
+          this.combatTranscation = ''
+          this.requestKey = event.args.requestKey
+        }
+      })
+
+      this.wallet.watchContractEvent(this.rankManagerContract, 'RankUpdate', event => {
+        if (event?.args.requestKey === this.requestKey) {
+          this.requestKey = ''
+          this.$emit('combatEnd', { petId: this.myPetId })
+          if (event.args.isWin) {
+            this.$notification.open({
+              message: `Arena #${this.arena.item_id}: You got the victory! 🏳️‍🌈🏳️‍🌈🏳️‍🌈`,
+              description: `Congratulations on your victory! 💪`,
+              duration: 7,
+              key: this.combatKey,
+            })
+            this.$emit('onWin', { petId: this.myPetId })
+            this.combating = false
+          } else {
+            this.$notification.open({
+              message: `Arena #${this.arena.item_id}: You lost the battle. 🏳️🏳️🏳️`,
+              description: `Please don't be discouraged and keep up the good work! 💪`,
+              duration: 7,
+              key: this.combatKey,
+            })
+            this.$emit('onLose', { petId: this.myPetId })
+            this.combating = false
+          }
+        }
+      })
 
 
       this.updateMyNulls()
@@ -162,154 +198,46 @@ export default {
     async handleCombat() {
       if (!this.myPetId) return this.$message.error('Please choose your nulls before the combat.')
 
-      const TIPS_KEY = `arena-${this.arena.item_id}-${guid()}`
-      const title = (t) => `Arena #${this.arena.item_id}: ${t}`
+      const { timestamp, status } = await this.wallet.getLatestBlockTimestamp()
+      if (!status) return this.$message.error('Could not get latest block time, please try again.')
 
-      // Check allowance
-      const ALLOWANCE = BigNumber.from(1_000_000_000_000)
-      const allowance = await this.tokenContract['allowance'](this.wallet.address, NullsRankManager.address)
-
-      // Approve if need
-      if (allowance < ALLOWANCE) {
-        this.approving = true
-        this.$notification.open({
-          message: title('Approving Required ❗'),
-          description: 'Your authorization is required to send the transaction, please go to your wallet to confirm...',
-          duration: 0,
-          key: TIPS_KEY
-        })
-        const approveAmount = addDecimal(ALLOWANCE, this.arena.token_precision).toString()
-        try {
-          const approveTx = await this.tokenContract['approve'](NullsRankManager.address, approveAmount)
-          this.$notification.open({
-            message: title('Waiting for Approving...'),
-            description: WALLET_TIPS.txSend,
-            duration: 0,
-            key: TIPS_KEY
-          })
-          await approveTx.wait().then(receipt => {
-            console.log(receipt)
-            if (receipt.status === 1) {
-              console.log(`================approveTx=================`)
-              this.$notification.open({
-                message: title('Successful approve ✔️'),
-                description: 'Successful approve.',
-                duration: 0,
-                key: TIPS_KEY
-              })
-              this.approving = false
-            }
-          })
-        } catch (err) {
-          console.error(err)
-          this.$notification.open({
-            message: title('Challenge failed ❌'),
-            description: 'please try again.',
-            duration: 2,
-            key: TIPS_KEY
-          })
-          this.approving = false
-          this.$emit('combatFailed', { petId: this.myPetId, result: 'Failed to transcation approving' })
-          return
-        }
-      }
-
-      // Ready to send pk transcation
-      this.combating = true
-      this.$emit('combatStart', { petId: this.myPetId })
-      this.$notification.open({
-        message: title('Preparing Transaction ✨'),
-        description: 'Getting latest block number...',
-        duration: 0,
-        key: TIPS_KEY
-      })
-
-      const latestBlock = await this.wallet.signer.provider.getBlock()
-      if (!latestBlock) {
-        this.$notification.open({
-          message: title('Challenge failed ❌'),
-          description: 'Could not get latest block, please try again.',
-          duration: 2,
-          key: TIPS_KEY
-        })
-        this.combating = false
-        this.$emit('combatEnd', { petId: this.myPetId })
-        this.$emit('combatFailed', { petId: this.myPetId, result: 'Failed to get latest block' })
-        return
-      }
-
-      // Send pk transcation
-      const uuid = guid()
-      try {
-        const deadline = latestBlock.timestamp + 1800
-        this.$notification.open({
-          message: title('Request to start the combat... 🔮'),
-          description: 'The battle is about to start, please go to the wallet to confirm. 📑',
-          duration: 0,
-          key: TIPS_KEY
-        })
-        const pkTx = await this.ringManagerContract.pk(this.arena.item_id, this.myPetId, deadline, uuid)
-        this.$emit('combatApproving', { petId: this.myPetId, uuid, pkTx: pkTx.hash })
-        this.$notification.open({
-          message: title('Waiting for combat requests. 📑'),
-          description: 'Combat request has been sent, waiting for combat to be accepted.',
-          duration: 0,
-          key: TIPS_KEY
-        })
-        await pkTx.wait().then(receipt => {
-          console.log(receipt)
-          if (receipt.status === 1) {
-            this.$emit('combatApproved', { petId: this.myPetId, uuid })
-            this.$notification.open({
-              message: title('The Combat has begun! 🔥🔥🔥'),
-              description: `The combat has begun, please wait for the result. 💪`,
-              duration: 0,
-              key: TIPS_KEY,
-            })
-            console.log(`================pkTx=================`)
-            this.r = setInterval(async () => {
-              const { data } = await Ring.requestCombatResult({ uuid })
-              if (!data.data) return
-
-              this.$emit('combatEnd', { petId: this.myPetId, uuid })
-              if (data.data.isWin === 0) {
-                this.$notification.open({
-                  message: title('You got the victory! 🏳️‍🌈🏳️‍🌈🏳️‍🌈'),
-                  description: `Congratulations on your victory! 💪`,
-                  duration: 7,
-                  key: TIPS_KEY,
-                })
-                this.$emit('onWin', { petId: this.myPetId, uuid })
-                clearInterval(this.r)
-                this.combating = false
-              } else {
-                this.$notification.open({
-                  message: title('You lost the battle. 🏳️🏳️🏳️'),
-                  description: `Please don't be discouraged and keep up the good work! 💪`,
-                  duration: 7,
-                  key: TIPS_KEY,
-                })
-                this.$emit('onLose', { petId: this.myPetId, uuid })
-                clearInterval(this.r)
-                this.combating = false
-              }
-            }, 2000);
+      this.combatKey = `Combat-${guid()}`
+      await this.wallet.approveAndSend({
+        handle: 'Combat',
+        approveContract: this.tokenContract,
+        approveChecker: this.arena.tickets * 10,
+        component: this,
+        transcationFactory: async () => {
+          console.log(this.arena.item_id, this.myPetId, timestamp + 1800)
+          return await this.rankManagerContract['pk'](this.arena.item_id, this.myPetId, timestamp + 1800)
+        },
+        transcationOptions: {
+          key: this.combatKey,
+          statusProps: 'combating',
+          beforeStart: () => {
+            this.$emit('combatStart', { petId: this.myPetId })
+          },
+          onStart: (transcation) => {
+            this.combatTranscation = transcation.hash
+            this.$emit('combatApproving', { petId: this.myPetId, pkTx: transcation.hash })
+          },
+          onComplete: (transcation) => {
+            this.$emit('combatApproved', { petId: this.myPetId })
+          },
+          onError: (err) => {
+            this.$emit('combatEnd', { petId: this.myPetId })
+            this.$emit('combatFailed', { petId: this.myPetId, result: WALLET_ERRORS[err.code] || 'BlockChain Error' })
+          },
+          messages: {
+            startTitle: 'Request to start the combat... 🔮',
+            startContent: 'The battle is about to start, please go to the wallet to confirm. 📑',
+            waitingTitle: 'Waiting for combat requests. 📑',
+            successTitle: 'The Combat has begun! 🔥🔥🔥',
+            successContent: `The combat has begun, please wait for the result. 💪`,
+            errorTitle: 'Challenge failed ❌'
           }
-        })
-      } catch (err) {
-        clearInterval(this.r)
-        this.$notification.open({
-          message: title('Challenge failed ❌'),
-          description: 'Challenge failed, please try again.',
-          duration: 2,
-          key: TIPS_KEY
-        })
-        this.combating = false
-        this.$emit('combatEnd', { petId: this.myPetId, uuid })
-        const result = err.code === 4001 ? err.message : 'BlockChain Error'
-        this.$emit('combatFailed', { petId: this.myPetId, uuid, result })
-        return
-      }
+        }
+      })
     }
   }
 }

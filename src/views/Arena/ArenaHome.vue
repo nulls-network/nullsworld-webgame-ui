@@ -190,7 +190,6 @@
             </div>
             <div class="flex" v-else-if="rec.event === 'combatApproved'">
               The battle has begun!
-              <div class="font-bold px-2">UUID: {{ rec.ev.uuid }}</div>
             </div>
             <div class="flex" v-else-if="rec.event === 'combatFailed'">
               Combat failed, error message:
@@ -198,11 +197,9 @@
             </div>
             <div class="flex" v-else-if="rec.event === 'lose'">
               Combat Failed!
-              <div class="font-bold px-2">UUID: {{ rec.ev.uuid }}</div>
             </div>
             <div class="flex" v-else-if="rec.event === 'lose'">
               You win the battle!
-              <div class="font-bold px-2">UUID: {{ rec.ev.uuid }}</div>
             </div>
             <div class="flex" v-else>{{ rec }}</div>
           </div>

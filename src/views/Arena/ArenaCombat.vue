@@ -129,7 +129,7 @@ export default {
             tokenDecimals: 6,
             tokenSymbol: 'USDT',
 
-            ringManagerContract: undefined,
+            rankManagerContract: undefined,
             nullsWorldCoreContract: undefined,
             approving: false,
             combating: false,
@@ -147,7 +147,7 @@ export default {
         this.getRingData()
 
         // Create contracts
-        this.ringManagerContract = this.wallet.createContract(NullsRankManager)
+        this.rankManagerContract = this.wallet.createContract(NullsRankManager)
 
         this.tokenAddress = ERC20.getAddress(this.tokenSymbol)
         this.tokenContract = this.wallet.createERC20(this.tokenAddress)
@@ -232,7 +232,7 @@ export default {
                 const deadline = latestBlock.timestamp + 1800
                 const uuid = guid()
                 this.tipText = 'Sending...'
-                const pkTx = await this.ringManagerContract.pk(this.ringData.item_id, this.paramStore.arenaNullsId, deadline, uuid)
+                const pkTx = await this.rankManagerContract.pk(this.ringData.item_id, this.paramStore.arenaNullsId, deadline, uuid)
                 clearInterval(this.combatTimeInterval)
                 this.combatTimeInterval = setInterval(() => {
                     this.combatTime += 1000
