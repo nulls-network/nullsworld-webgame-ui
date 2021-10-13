@@ -288,6 +288,7 @@ export default {
         ), {
         key: TIPS_KEY,
         title,
+        component: this,
         statusProps: 'purchasing',
         onComplete: () => this.updateBalance(),
         messages: {
