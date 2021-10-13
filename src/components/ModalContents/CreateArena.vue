@@ -154,7 +154,7 @@ export default {
     this.rankManagerContract = markRaw(this.wallet.createContract(NullsRankManager))
 
 
-    this.wallet.watchContractEvent(rankManagerContract, 'NewRank', event => {
+    this.wallet.watchContractEvent(this.rankManagerContract, 'NewRank', event => {
 
     })
 
