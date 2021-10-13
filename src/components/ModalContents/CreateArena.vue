@@ -69,7 +69,7 @@
         <div class="form-column">
           <div>Tickets</div>
           <div class="px-4 font-bold" style="color: #ff761a;">
-            <span class="px-2">{{ sigleBet }}</span>
+            <span class="px-2">{{ tickets }}</span>
             <span>{{ tokenSymbol }}</span>
           </div>
         </div>
@@ -103,16 +103,12 @@
 
 <script>
 import { NullsEggToken, NullsEggManager, NullsRankManager } from '@/contracts'
-import { BigNumber, utils } from 'ethers'
 import { addDecimal, formatNumber, removeDecimal, calcColor } from '@/utils/common'
-import { MyEggs, Ring } from '@/backends'
-import { h } from 'vue'
+import { markRaw } from 'vue'
 
 import NullsPreview from '@/components/Items/NullsPreview.vue'
-import { CheckCircleTwoTone, LoadingOutlined } from '@ant-design/icons-vue'
-import { WALLET_ERRORS, WALLET_TIPS } from '@/utils/wallet/constants'
+import { LoadingOutlined } from '@ant-design/icons-vue'
 
-const ITEM_KEY = 'nulls.online-play'
 
 
 export default {
@@ -126,15 +122,15 @@ export default {
       approving: false,
 
       tokenBalance: 0,
-      eggContract: undefined,
-      eggManagerContract: undefined,
-      ringManagerContract: undefined,
+      eggContract: markRaw({}),
+      eggManagerContract: markRaw({}),
+      rankManagerContract: markRaw({}),
       updateBalanceInterval: undefined,
       multiplier: 5,
 
       multiplers: [5, 10],
       contractTokenDecimal: undefined,
-      sigleBet: 10,
+      tickets: 0,
 
       selectedTokenIndex: 0,
       tokens: [
@@ -153,10 +149,14 @@ export default {
   },
   async created() {
     // Create contracts
-    this.eggContract = this.wallet.createContract(NullsEggToken)
-    this.eggManagerContract = this.wallet.createContract(NullsEggManager)
-    this.ringManagerContract = this.wallet.createContract(NullsRankManager)
+    this.eggContract = markRaw(this.wallet.createContract(NullsEggToken))
+    this.eggManagerContract = markRaw(this.wallet.createContract(NullsEggManager))
+    this.rankManagerContract = markRaw(this.wallet.createContract(NullsRankManager))
 
+
+    this.wallet.watchContractEvent(rankManagerContract, 'NewRank', event => {
+
+    })
 
     this.subscribeToken()
   },
@@ -168,7 +168,7 @@ export default {
       return !this.tokenBalance || (this.totalBet > this.tokenBalance)
     },
     totalBet() {
-      return this.sigleBet * this.multiplier
+      return this.tickets * this.multiplier
     },
     currentToken() {
       return this.tokens[this.selectedTokenIndex]
@@ -196,6 +196,9 @@ export default {
       // Get decimals
       this.tokenContract['decimals']().then(d => {
         this.contractTokenDecimal = d
+        this.rankManagerContract['getPrice'](this.tokenAddress).then(b => {
+          this.tickets = removeDecimal(b, d)
+        })
       })
 
       clearInterval(this.updateBalanceInterval)
@@ -203,103 +206,30 @@ export default {
         this.updateBalanceInterval = setInterval(this.updateBalance, 10_000);
       })
     },
-    async readyOpenEggs() {
-      const latestBlock = await this.wallet.signer.provider.getBlock()
-      const { code, data } = (await MyEggs.getItemId()).data
-      if (code !== 200) {
-        return { err: 'Could not get itemId, please try again.' }
-      }
-      return { itemId: data.item_id, deadline: latestBlock.timestamp + 1800, err: undefined }
-    },
     async handleCreateArena() {
-      if (!this.tokenBalance || this.paramStore.arenaNullsId < 0) return
+      const petId = this.paramStore.arenaNullsId
+      if (!this.tokenBalance || petId < 0) return
 
-      // Check allowance
-      const ALLOWANCE = BigNumber.from(1_000_000_000_000)
-      const allowance = await this.tokenContract['allowance'](this.wallet.address, NullsRankManager.address)
-
-      // Approve if need
-      if (allowance < ALLOWANCE) {
-        this.approving = true
-        let hiedeApprovingHint = this.$message.loading({ content: 'Approving required, waiting for your approval', key: 'approving', duration: 0 })
-        const approveAmount = addDecimal(ALLOWANCE, this.usdtDecimals).toString()
-        try {
-          const approveTx = await this.tokenContract['approve'](NullsRankManager.address, approveAmount)
-          hiedeApprovingHint = this.$message.loading({ content: WALLET_TIPS.txSend, key: 'approving', duration: 0 })
-          await approveTx.wait().then(receipt => {
-            console.log(receipt)
-            if (receipt.status === 1) {
-              console.log(`================approveTx=================`)
-              this.$message.success('Successful approve!')
-              hiedeApprovingHint()
-              this.approving = false
-            }
-          })
-        } catch (err) {
-          hiedeApprovingHint()
-          console.error(err)
-          this.$message.error(WALLET_ERRORS[err.code] || err.data?.message || err.message)
-          this.approving = false
-        }
-      }
-
-      // Handle create arena
-      let txHash
-      this.creating = true
-      let creatingArena = this.$message.loading({ content: 'Constructing data and requesting game servers...', key: 'creating', duration: 0 })
-      try {
-        const nonce = Number(await this.ringManagerContract['nonces'](this.wallet.address))
-        console.log(nonce)
-        const bytesData = new utils.AbiCoder().encode(['string', 'uint', 'address', 'uint8', 'uint256', ' uint256'],
-          [ITEM_KEY, this.paramStore.arenaNullsId, this.tokenAddress, this.multiplier, nonce, Number(this.wallet.chainId)])
-        const signature = await this.wallet.signer.signMessage(utils.arrayify(utils.keccak256(bytesData)))
-        const { r, s, v } = utils.splitSignature(signature)
-        /* utils.verifyMessage(utils.keccak256(bytesData), signature) */
-        const { data } = await Ring.createRing({
-          owner_address: this.wallet.address,
-          pet_id: this.paramStore.arenaNullsId,
-          token: this.tokenAddress,
-          multiple: this.multiplier,
-          r,
-          s,
-          v
-        })
-        if (data.code != 200) {
-          this.creating = false
-          creatingArena()
-          console.error(data)
-          this.$message.error(data.message)
-          return
-        }
-        txHash = data.data.tx_hash
-      } catch (err) {
-        this.creating = false
-        creatingArena()
-        console.error(err)
-        this.$message.error(err.message)
-        return
-      }
-
-      creatingArena = this.$message.loading(
-        {
-          content:
-            `Transactions #${txHash} have been sent to the blockchain. Awaiting block confirmation...`,
-          key: 'creating',
-          duration: 0
-        })
-
-      this.wallet.$.provider.waitForTransaction(txHash).then(receipt => {
-        if (receipt.status === 1) {
-          console.log(`===============TX DONE==================`)
-          this.creating = false
-          creatingArena()
-          this.updateBalance()
-          this.$notification.open({
-            message: 'Successful Created Arena',
-            description: `Transcations #${txHash} success! Create Arena with Nulls #${this.paramStore.arenaNullsId}`,
-            icon: h(CheckCircleTwoTone, { twoToneColor: '#52c41a' }),
-          })
-          this.$root.closeGlobalModal()
+      await this.wallet.approveAndSend({
+        handle: 'CreateArena',
+        approveContract: this.tokenContract,
+        approveChecker: addDecimal(this.totalBet * 100, this.tokenDecimals),
+        component: this,
+        transcationFactory: async () => {
+          return await this.rankManagerContract['createRank'](
+            petId, this.tokenAddress, this.multiplier
+          )
+        },
+        transcationOptions: {
+          statusProps: 'creating',
+          onComplete: () => this.updateBalance(),
+          messages: {
+            startTitle: 'Creating Arena 📑',
+            waitingTitle: 'Waiting for creation results 📑',
+            successTitle: 'Successful create Arena ✔️',
+            successContent: `Successfully create arena with Pet ${petId}`,
+            errorTitle: 'Creating Arena failed ❌'
+          }
         }
       })
     },
