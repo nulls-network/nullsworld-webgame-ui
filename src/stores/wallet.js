@@ -151,9 +151,10 @@ export const useWallet = (global) => {
                 return new Promise(async (resolve, reject) => {
                     // Check allowance
                     const allowance = await contract['allowance'](this.address, CONTRACT_ADDRESS.TransferProxy)
+                    /* console.log(key, allowance.toString(), targetAllowance.toString(), allowance.gte(targetAllowance)) */
 
                     // Check approvement
-                    if (!allowance.lt(targetAllowance)) {
+                    if (allowance.gte(targetAllowance)) {
                         return resolve(true)
                     }
 
@@ -210,6 +211,7 @@ export const useWallet = (global) => {
                 key,
                 title,
                 statusProps,
+                beforeStart,
                 onStart,
                 onComplete,
                 onError,
@@ -228,6 +230,7 @@ export const useWallet = (global) => {
                     })
                     if (component) component[statusProps] = true
                     try {
+                        if (beforeStart) beforeStart(key)
                         const transcation = await transcationFactory()
                         global.$notification.open({
                             message: title(messages.waitingTitle),
@@ -275,6 +278,22 @@ export const useWallet = (global) => {
 
                 const tOptions = Object.assign({ component, key, title, }, transcationOptions || {})
                 return await this.handleTranscation(transcationFactory, tOptions)
+            },
+            watchContractEvent(contract, event, callback) {
+                contract.on(event, (...args) => {
+                    let ev = args.slice(-1)
+                    if (ev) ev = ev[0]
+                    console.log(`${event} event:`, ev)
+                    if (callback) callback(ev)
+                })
+            },
+            async getLatestBlockTimestamp() {
+                try {
+                    const latestBlock = await this.signer.provider.getBlock()
+                    return { timestamp: latestBlock.timestamp, status: true }
+                } catch (err) {
+                    return { timestamp: null, status: false }
+                }
             }
         }
     })()

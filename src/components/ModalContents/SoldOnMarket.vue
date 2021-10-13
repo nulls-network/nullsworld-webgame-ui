@@ -132,7 +132,7 @@ export default {
       tokenBalance: 0,
       eggContract: undefined,
       eggManagerContract: undefined,
-      ringManagerContract: undefined,
+      rankManagerContract: undefined,
       updateBalanceInterval: undefined,
       multiplier: 5,
 

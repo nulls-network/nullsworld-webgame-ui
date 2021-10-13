@@ -159,13 +159,12 @@ export default {
       this.eggContract = markRaw(this.wallet.createContract(NullsEggToken))
       this.eggManagerContract = markRaw(this.wallet.createContract(NullsEggManager))
 
-      this.eggManagerContract.on('EggNewNonce', (...args) => {
-        const event = args.slice(-1)
-        console.log('EggNewNonce event:', event)
+      this.wallet.watchContractEvent(this.eggManagerContract, 'EggNewNonce', event => {
+
       })
-      this.eggManagerContract.on('NewPet', (...args) => {
-        const event = args.slice(-1)
-        console.log('NewPet event:', event)
+
+      this.wallet.watchContractEvent(this.eggManagerContract, 'NewPet', event => {
+
       })
 
       await this.updateEggBalance()
@@ -181,14 +180,14 @@ export default {
       this.selected = key
     },
     async readyOpenEggs() {
-      const latestBlock = await this.wallet.signer.provider.getBlock()
+      const { timestamp, status } = await this.wallet.getLatestBlockTimestamp()
+      if (!status) return { err: 'Could not get latest block time' }
+
       const { code, data } = (await MyEggs.getItemId()).data
-      if (code !== 200) {
-        return { err: 'Could not get itemId, please try again.' }
-      }
+      if (code !== 200) return { err: 'Could not get itemId, please try again.' }
       return {
         itemId: data.item_id,
-        deadline: latestBlock.timestamp + 1800,
+        deadline: timestamp + 1800,
         err: undefined
       }
     },
@@ -213,7 +212,7 @@ export default {
         approveChecker: this.openEggAmount,
         component: this,
         transcationFactory: async () => {
-          return await this.eggManagerContract['openMultiple'](this.openEggAmount, 8, deadline)
+          return await this.eggManagerContract['openMultiple'](this.openEggAmount, itemId, deadline)
         },
         transcationOptions: {
           statusProps: 'hatching',
