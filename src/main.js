@@ -80,7 +80,7 @@ app.config.globalProperties.$message = message
 app.config.globalProperties.$notification = notification
 
 // Global store
-app.config.globalProperties.wallet = useWallet(app)
+app.config.globalProperties.wallet = useWallet(app.config.globalProperties)
 app.config.globalProperties.paramStore = useParamStore()
 
 // Mount

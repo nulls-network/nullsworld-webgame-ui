@@ -11,7 +11,7 @@ import { findEvent } from '@/utils/wallet/utils'
 import { CHAIN_ID, WALLET_TIPS, WALLET_ERRORS, DEFAULT_TX_MESSAGES } from '@/utils/wallet/constants'
 
 
-export const useWallet = (app) => {
+export const useWallet = (global) => {
     return defineStore('wallet', {
         state: () => ({
             /** @type {{ string: { address: string } }} */
@@ -121,7 +121,7 @@ export const useWallet = (app) => {
                     this.connectedWallet = ref(this.$?.connector?.label)
                 } catch (connectErr) {
                     console.error('[Wallet Store] connectErr: ', connectErr)
-                    /* app.config.globalProperties.$message.error(connectErr.message) */
+                    /* global.$message.error(connectErr.message) */
                     return false
                 }
                 console.info('[Wallet Store] Wallet connect done.')
@@ -133,7 +133,7 @@ export const useWallet = (app) => {
                     if (this.$.chainIdNumber() !== CHAIN_ID) await this.$.switchNetwork()
                 } catch (switchErr) {
                     console.error('[Wallet Store] switchErr: ', switchErr)
-                    app.config.globalProperties.$message.error(switchErr.message)
+                    global.$message.error(switchErr.message)
                 }
                 console.info('[Wallet Store] Chain switch end.')
             },
@@ -159,7 +159,7 @@ export const useWallet = (app) => {
 
                     // Approve if need
                     if (component) component[statusProps] = true
-                    app.config.globalProperties.$notification.open({
+                    global.$notification.open({
                         message: title('Approving Required ❗'),
                         description:
                             'Your authorization is required to send the transaction, please go to your wallet to confirm...',
@@ -172,17 +172,16 @@ export const useWallet = (app) => {
                             CONTRACT_ADDRESS.TransferProxy,
                             addDecimal(calcApproveAmount(tokenDecimal), tokenDecimal).toString()
                         )
-                        app.config.globalProperties.$notification.open({
+                        global.$notification.open({
                             message: title('Waiting for Approving...'),
                             description: WALLET_TIPS.txSend,
                             duration: 0,
                             key
                         })
                         await approveTx.wait().then((receipt) => {
-                            console.log(receipt)
+                            console.log(`${key} Approving Error:`, receipt)
                             if (receipt.status === 1) {
-                                console.log(`================approveTx=================`)
-                                app.config.globalProperties.$notification.open({
+                                global.$notification.open({
                                     message: title('Successful approve ✔️'),
                                     description: 'Successful approve.',
                                     duration: 0,
@@ -193,8 +192,8 @@ export const useWallet = (app) => {
                             }
                         })
                     } catch (err) {
-                        console.error(err)
-                        app.config.globalProperties.$notification.open({
+                        console.error(`${key} Approving Error:`, err)
+                        global.$notification.open({
                             message: title('Approving failed ❌'),
                             description: WALLET_ERRORS[err.code] || err.data?.message || err.message,
                             duration: 2,
@@ -221,7 +220,7 @@ export const useWallet = (app) => {
                 if (!statusProps) statusProps = 'handling'
                 messages = Object.assign(DEFAULT_TX_MESSAGES, messages || {})
                 return new Promise(async (resolve, reject) => {
-                    app.config.globalProperties.$notification.open({
+                    global.$notification.open({
                         message: title(messages.startTitle),
                         description: messages.startContent,
                         duration: 0,
@@ -230,7 +229,7 @@ export const useWallet = (app) => {
                     if (component) component[statusProps] = true
                     try {
                         const transcation = await transcationFactory()
-                        app.config.globalProperties.$notification.open({
+                        global.$notification.open({
                             message: title(messages.waitingTitle),
                             description: messages.waitingContent,
                             duration: 0,
@@ -240,7 +239,7 @@ export const useWallet = (app) => {
                         await transcation.wait().then((receipt) => {
                             console.log(`${key} Tx receipt:`, receipt)
                             if (receipt.status === 1) {
-                                app.config.globalProperties.$notification.open({
+                                global.$notification.open({
                                     message: title(messages.successTitle),
                                     description: messages.successContent,
                                     duration: 7,
@@ -248,12 +247,12 @@ export const useWallet = (app) => {
                                 })
                                 if (component) component[statusProps] = false
                                 if (onComplete) onComplete(transcation, receipt)
-                                return resolve({ status: true, transcation, receipt, err: null })
+                                return resolve({ status: 1, transcation, receipt, err: null })
                             }
                         })
                     } catch (err) {
                         console.error(`${key} Tx Error:`, err)
-                        app.config.globalProperties.$notification.open({
+                        global.$notification.open({
                             message: title(messages.errorTitle),
                             description: messages.errorContent || WALLET_ERRORS[err.code] || err.data?.message || err.message,
                             duration: 2,
@@ -261,9 +260,21 @@ export const useWallet = (app) => {
                         })
                         if (component) component[statusProps] = false
                         if (onError) onError(err)
-                        return resolve({ status: false, err })
+                        return resolve({ status: -1, err })
                     }
                 })
+            },
+            async approveAndSend({ handle, approveContract, approveChecker, component, transcationFactory, approveOptions, transcationOptions }) {
+                const key = `${handle}-${guid()}`
+                const title = (t) => `${handle}: ${t}`
+
+                const aOptions = Object.assign({ component, key, title, tokenDecimal: component?.tokenDecimal }, approveOptions || {})
+                if (!await this.approveContract(approveContract, approveChecker, aOptions)) {
+                    return { status: -2 }
+                }
+
+                const tOptions = Object.assign({ component, key, title, }, transcationOptions || {})
+                return await this.handleTranscation(transcationFactory, tOptions)
             }
         }
     })()
