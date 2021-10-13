@@ -281,48 +281,23 @@ export default {
       }
 
       // Purchase eggs
-      this.$notification.open({
-        message: title('Purchasing Eggs 📑'),
-        description: 'Awaiting approval of transaction...',
-        duration: 0,
-        key: TIPS_KEY
-      })
-      this.purchasing = true
-      try {
-        const purchaseTx = await this.eggManagerContract['buy'](
+      await this.wallet.handleTranscation(async () =>
+        await this.eggManagerContract['buy'](
           this.eggAmount,
           this.tokenAddress
-        )
-        this.$notification.open({
-          message: title('Waiting for Purchasing result 📑'),
-          description: WALLET_TIPS.txSend,
-          duration: 0,
-          key: TIPS_KEY
-        })
-        await purchaseTx.wait().then((receipt) => {
-          console.log(receipt)
-          if (receipt.status === 1) {
-            console.log(`===============purchaseTx==================`)
-            this.purchasing = false
-            this.updateBalance()
-            this.$notification.open({
-              message: title('Successful purchase ✔️'),
-              description: `Successfully purchased ${this.eggAmount} eggs, please check in MyEggs!`,
-              duration: 7,
-              key: TIPS_KEY
-            })
-          }
-        })
-      } catch (err) {
-        console.error(err)
-        this.$notification.open({
-          message: title('Purchasing failed ❌'),
-          description: WALLET_ERRORS[err.code] || err.data?.message || err.message,
-          duration: 2,
-          key: TIPS_KEY
-        })
-        this.purchasing = false
-      }
+        ), {
+        key: TIPS_KEY,
+        title,
+        statusProps: 'purchasing',
+        onComplete: () => this.updateBalance(),
+        messages: {
+          startTitle: 'Purchasing Eggs 📑',
+          waitingTitle: 'Waiting for Purchasing result 📑',
+          successTitle: 'Successful purchase ✔️',
+          successContent: `Successfully purchased ${this.eggAmount} eggs, please check in MyEggs!`,
+          errorTitle: 'Purchasing failed ❌'
+        }
+      })
     },
     handleClickQuantity(e) {
       if (e.target.tagName.toLowerCase() === 'span') {
@@ -525,7 +500,7 @@ export default {
     border-radius: 8px;
     border: 1px solid #aaa;
     cursor: pointer;
-    transition: .2s ease;
+    transition: 0.2s ease;
 
     &.active {
       color: #ff7427;

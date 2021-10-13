@@ -24,3 +24,13 @@ export const WALLET_TIPS = {
     txSend: 'The transaction has been sent, please wait for the result...'
 }
 
+export const DEFAULT_TX_MESSAGES = {
+    startTitle: 'Sending Transcations 📑',
+    startContent: 'Awaiting approval of transactions...',
+    waitingTitle: 'Waiting for Transcations result 📑',
+    waitingContent: 'The transactions has been sent, please wait for the result...',
+    successTitle: 'Transcations Success ✔️',
+    successContent: 'Transcations Success',
+    errorTitle: 'Transcations failed ❌',
+    errorContent: ''
+}
