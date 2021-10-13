@@ -270,39 +270,30 @@ export default {
     async handlePurchase() {
       if (this.approving) return
 
-      const TIPS_KEY = `buyEggs-${guid()}`
-      const title = (t) => `BuyEggs: ${t}`
-
-      if (!await this.wallet.approveContract(
-        this.tokenContract,
-        addDecimal(this.eggAmount * this.unitPrice, this.tokenDecimal), {
+      await this.wallet.approveAndSend({
+        handle: 'BuyEggs',
+        approveContract: this.tokenContract,
+        approveChecker: addDecimal(this.eggAmount * this.unitPrice, this.tokenDecimal),
         component: this,
-        key: TIPS_KEY,
-        title,
-        tokenDecimal: this.tokenDecimal
-      })) {
-        return
-      }
-
-      // Purchase eggs
-      await this.wallet.handleTranscation(async () =>
-        await this.eggManagerContract['buy'](
-          this.eggAmount,
-          this.tokenAddress
-        ), {
-        key: TIPS_KEY,
-        title,
-        component: this,
-        statusProps: 'purchasing',
-        onComplete: () => this.updateBalance(),
-        messages: {
-          startTitle: 'Purchasing Eggs 📑',
-          waitingTitle: 'Waiting for Purchasing result 📑',
-          successTitle: 'Successful purchase ✔️',
-          successContent: `Successfully purchased ${this.eggAmount} eggs, please check in MyEggs!`,
-          errorTitle: 'Purchasing failed ❌'
+        transcationFactory: async () => {
+          return await this.eggManagerContract['buy'](
+            this.eggAmount,
+            this.tokenAddress
+          )
+        },
+        transcationOptions: {
+          statusProps: 'purchasing',
+          onComplete: () => this.updateBalance(),
+          messages: {
+            startTitle: 'Purchasing Eggs 📑',
+            waitingTitle: 'Waiting for Purchasing result 📑',
+            successTitle: 'Successful purchase ✔️',
+            successContent: `Successfully purchased ${this.eggAmount} eggs, please check in MyEggs!`,
+            errorTitle: 'Purchasing failed ❌'
+          }
         }
       })
+
     },
     handleClickQuantity(e) {
       if (e.target.tagName.toLowerCase() === 'span') {
