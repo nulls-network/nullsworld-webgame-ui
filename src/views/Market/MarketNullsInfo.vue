@@ -280,7 +280,7 @@ export default {
       const key = `${handle}-${guid()}`
       const title = (t) => `${handle}: ${t}`
 
-      // Sell
+      // Unsell
       await this.wallet.handleTranscation(async () => {
         return await this.petTokenContract['unSellPet'](nullsId)
       }, {

@@ -79,16 +79,13 @@
 </template>
 
 <script>
-import { NullsWorldMarket } from '@/contracts'
-import { BigNumber } from 'ethers'
-import { h } from 'vue'
-import { CheckCircleTwoTone, LoadingOutlined } from '@ant-design/icons-vue'
+import { NullsPetToken } from '@/contracts'
+import { LoadingOutlined } from '@ant-design/icons-vue'
 
 import NullsPreview from '@/components/Items/NullsPreview.vue'
 import NeedWalletConnect from '@/components/Common/NeedWalletConnect.vue'
 
 import { formatNumber, calcColor, removeDecimal } from '@/utils/common'
-import { WALLET_ERRORS, WALLET_TIPS } from '@/utils/wallet/constants'
 
 
 export default {
@@ -103,7 +100,6 @@ export default {
     data() {
         return {
             formatNumber, calcColor, removeDecimal,
-            marketContract: undefined,
             approving: false,
             purchasing: false,
             tokenBalance: 0,
@@ -135,7 +131,7 @@ export default {
 
             // Create contracts
             this.tokenContract = this.wallet.createERC20(this.item?.current_contract)
-            this.marketContract = this.wallet.createContract(NullsWorldMarket)
+            this.petTokenContract = this.wallet.createContract(NullsPetToken)
 
 
             this.updateEggBalance().then(() => {
@@ -146,69 +142,33 @@ export default {
             this.tokenBalance = Number(await this.tokenContract['balanceOf'](this.wallet.address))
         },
         async handleBuy() {
-            if (!this.item) return
+            if (!this.item?.pet_id) return
             if (this.approving || this.purchasing) return
+            const nullsId = this.item.pet_id
 
+            // Buy
             this.$emit('onPurchaseStart')
-
-            // Check allowance
-            const ALLOWANCE = BigNumber.from(1_000_000_000)
-            const allowance = await this.tokenContract['allowance'](this.wallet.address, NullsWorldMarket.address)
-
-            // Approve if need
-            if (allowance < ALLOWANCE) {
-                this.approving = true
-                let hiedeApprovingHint = this.$message.loading({ content: 'Approving required, waiting for your approval', key: 'approving', duration: 0 })
-                const approveAmount = addDecimal(ALLOWANCE, this.currentDecimal).toString()
-                try {
-                    const approveTx = await this.tokenContract['approve'](NullsWorldMarket.address, approveAmount)
-                    hiedeApprovingHint = this.$message.loading({ content: WALLET_TIPS.txSend, key: 'approving', duration: 0 })
-                    await approveTx.wait().then(receipt => {
-                        console.log(receipt)
-                        if (receipt.status === 1) {
-                            console.log(`================approveTx=================`)
-                            this.$message.success('Successful approve!')
-                            hiedeApprovingHint()
-                            this.approving = false
-                        }
-                    })
-                } catch (err) {
-                    hiedeApprovingHint()
-                    this.$emit('onPurchaseDone')
-                    console.error(err)
-                    this.$message.error(WALLET_ERRORS[err.code] || err.data?.message || err.message)
-                    this.approving = false
-                    return
-                }
-            }
-
-            // Purchase eggs
-            let hidePurchasingHint = this.$message.loading({ content: 'Awaiting approval of transaction', key: 'purchasing', duration: 0 })
-            this.purchasing = true
-            try {
-                const purchaseTx = await this.marketContract['buyPet'](this.item.pet_id)
-                hidePurchasingHint = this.$message.loading({ content: WALLET_TIPS.txSend, key: 'purchasing', duration: 0 })
-                await purchaseTx.wait().then(receipt => {
-                    console.log(receipt)
-                    if (receipt.status === 1) {
-                        console.log(`===============purchaseTx==================`)
-                        this.purchasing = false
-                        this.$emit('onPurchaseDone', 1)
-                        hidePurchasingHint()
-                        this.$notification.open({
-                            message: 'Successful purchase',
-                            description: `Successfully purchased Nulls #${this.item.pet_id}`,
-                            icon: h(CheckCircleTwoTone, { twoToneColor: '#52c41a' }),
-                        })
+            await this.wallet.approveAndSend({
+                handle: 'BuyPets',
+                approveContract: this.tokenContract,
+                approveChecker: this.item.price,
+                component: this,
+                transcationFactory: async () => {
+                    return await this.petTokenContract['buyPet'](nullsId)
+                },
+                transcationOptions: {
+                    statusProps: 'purchasing',
+                    onComplete: () => this.$emit('onPurchaseDone', 1),
+                    onError: () => this.$emit('onPurchaseDone'),
+                    messages: {
+                        startTitle: 'Purchasing Pets 📑',
+                        waitingTitle: 'Waiting for Purchasing result 📑',
+                        successTitle: 'Successful Purchase ✔️',
+                        successContent: `Successfully purchased Nulls #${nullsId}, please check in MyNulls!`,
+                        errorTitle: 'Purchase failed ❌'
                     }
-                })
-            } catch (err) {
-                hidePurchasingHint()
-                console.error(err)
-                this.$emit('onPurchaseDone')
-                this.$message.error(WALLET_ERRORS[err.code] || err.data?.message || err.message)
-                this.purchasing = false
-            }
+                }
+            })
         }
     }
 }
