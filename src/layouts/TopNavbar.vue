@@ -319,6 +319,7 @@ button {
   left: 0;
   top: 10px;
   transition: 0.2s ease;
+  transform: translateZ(0);
 }
 
 #hight-light-arrow img {
