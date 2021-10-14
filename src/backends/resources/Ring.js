@@ -30,8 +30,13 @@ export default {
         return get('ring/findById', { params })
     },
 
-    requestCombatResult(params) {
-        return get('ringRecord/findByuuid', { params })
+
+    /** 
+     * @param {{id: number}} params
+     * @return {Promise<import('axios').AxiosResponse<any>>}
+     **/
+    getCombatResult(params) {
+        return get('ringRecord/findById', { params })
     },
 
     /** 

@@ -92,6 +92,7 @@ export function decimalMutipler(decimal) {
  * @param {BigNumberish} decimal
  **/
 export function addDecimal(originAmount, decimal) {
+  if (originAmount === undefined || originAmount === null) originAmount = 0
   if (!originAmount?._isBigNumber) originAmount = BigNumber.from(originAmount)
   return originAmount.mul(decimalMutipler(decimal))
 }
@@ -101,6 +102,7 @@ export function addDecimal(originAmount, decimal) {
  * @param {BigNumberish} decimal
  **/
 export function removeDecimal(originAmount, decimal) {
+  if (originAmount === undefined || originAmount === null) originAmount = 0
   if (!originAmount?._isBigNumber) originAmount = BigNumber.from(originAmount)
   return originAmount.div(decimalMutipler(decimal))
 }

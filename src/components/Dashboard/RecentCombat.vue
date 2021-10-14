@@ -97,10 +97,11 @@
                   Transcation Hash:
                   <div class="font-bold">{{ record.tx_hash }}</div>
                 </template>
-                <button class="info-item-button pop-button">
-                  <a :href="txExplorer(record.tx_hash)" target="_blank" style="font-weight: bold;">
+                <button class="info-item-button pop-button" @click="handleReplay(record.id)">
+                  <!-- <a :href="txExplorer(record.tx_hash)" target="_blank" style="font-weight: bold;">
                     <img src="/button1.png" />
-                  </a>
+                  </a>-->
+                  <img src="/button1.png" />
                 </button>
               </a-tooltip>
             </div>
@@ -118,6 +119,9 @@
       </a-spin>
     </div>
   </div>
+  <CombatReplayModal v-model="showModal">
+    <CombatReplay v-if="renderReplayModal" key="CombatReplayContent" :combatId="replayCombatId" />
+  </CombatReplayModal>
 </template>
 
 
@@ -126,10 +130,12 @@ import { Dashboard } from '@/backends'
 import { formatDate, cutEthAddress, removeDecimal, txExplorer, accountExplorer, calcArenaImage, calcColor, formatNumber } from '@/utils/common'
 
 import empty from '@/components/Common/EmptyStatus.vue'
+import CombatReplayModal from '@/components/Combat/CombatReplayModal.vue'
+import CombatReplay from '@/components/Combat/CombatReplay.vue'
 
 export default {
   components: {
-    empty
+    empty, CombatReplayModal, CombatReplay
   },
   data() {
     return {
@@ -138,7 +144,11 @@ export default {
       page: 1,
       recordsTotal: 0,
       fetching: true,
-      updateInterval: -1
+      updateInterval: -1,
+      showModal: false,
+      replayCombatId: undefined,
+      renderReplayModal: false,
+      renderChangeTimeout: undefined
     }
   },
   props: {
@@ -164,6 +174,18 @@ export default {
       this.fetchRingRecord(true)
     }, 10000)
   },
+  watch: {
+    showModal(newVal, oldVal) {
+      if (newVal === oldVal) return
+      else if (newVal === false) return this.renderChangeTimeout = setTimeout(() => {
+        this.renderReplayModal = false
+      }, 1500)
+      else if (newVal === true) {
+        clearTimeout(this.renderChangeTimeout)
+        return this.renderReplayModal = true
+      }
+    }
+  },
   computed: {
     infoTextWidth() {
       return this.displayFullAddress ? 'auto' : '98px'
@@ -187,6 +209,10 @@ export default {
     },
     navigateTo(name) {
       name && this.$router.push({ name })
+    },
+    handleReplay(combatId) {
+      this.replayCombatId = combatId
+      this.showModal = true
     }
   }
 }
