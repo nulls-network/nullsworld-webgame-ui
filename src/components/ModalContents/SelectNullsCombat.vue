@@ -11,41 +11,81 @@
       @onWalletDisconnect="onDisconnect"
     >
       <a-spin tip="Loading..." :spinning="fetching || approving || combating">
-        <div class="my-nulls-content py-12">
-          <NoNulls v-if="!wallet.connected || noNulls" />
-          <div
-            v-else
-            v-for="n in displayNulls"
-            :class="[n.pet_id === myPetId ? 'nulls-selected' : '', 'nulls']"
-            @click="selectNulls(n)"
-          >
-            <div>
-              <img style="height: 120px;" :src="`/nulls${calcNullsImage(n.pet_id)}.png`" />
-            </div>
-            <div class="pt-6 font-bold">
-              <span style="font-size: 16px;">Nulls</span>
-              <span :class="[calcColor(n.pet_id), 'nulls-id']">#{{ n.pet_id }}</span>
-            </div>
+        <div
+          class="current-nulls mt-6 mb-2"
+        >Current Nulls {{ nullsIndex + 3 }} / {{ nulls?.length }}</div>
+        <div class="flex items-center">
+          <color-button @click="choiceLeft" buttonStyle="yellow" :disabled="couldNotLeftChoice">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              class="h-8 w-8"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M11 15l-3-3m0 0l3-3m-3 3h8M3 12a9 9 0 1118 0 9 9 0 01-18 0z"
+              />
+            </svg>
+          </color-button>
+          <div class="my-nulls-content my-8 mx-4">
+            <NoNulls v-if="!wallet.connected || noNulls" />
+            <transition-group name="list-complete" v-else>
+              <div
+                v-for="n in displayNulls"
+                :key="n"
+                :class="[n.pet_id === myPetId ? 'nulls-selected' : '', 'nulls list-complete-item']"
+                @click="selectNulls(n)"
+              >
+                <div>
+                  <img style="height: 120px;" :src="`/nulls${calcNullsImage(n.pet_id)}.png`" />
+                </div>
+                <div class="pt-6 font-bold">
+                  <span style="font-size: 16px;">Nulls</span>
+                  <span :class="[calcColor(n.pet_id), 'nulls-id']">#{{ n.pet_id }}</span>
+                </div>
+              </div>
+            </transition-group>
           </div>
+          <color-button @click="choiceRight" buttonStyle="yellow" :disabled="couldNotRightChoice">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              class="h-8 w-8"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M13 9l3 3m0 0l-3 3m3-3H8m13 0a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+          </color-button>
         </div>
       </a-spin>
+
       <div class="button-box flex justify-center mt-12">
         <color-button
           style="min-width: 260px;"
           @click="handleCombat"
-          :disabled="combating || !myPetId || noNulls || !wallet.connected"
+          :disabled="combating || petNotSelect || noNulls || !wallet.connected"
         >
           {{
             noNulls ? 'No Challenger Nulls' :
               !wallet.connected ? 'Wallet Not Connected' :
-                !myPetId ? 'Please choose a Challenger' :
+                petNotSelect ? 'Please choose a Challenger' :
                   `Fight with Nulls #${myPetId}`
           }}
         </color-button>
         <color-button
           class="ml-4"
           buttonStyle="blue"
-          @click="getRandNulls"
+          @click="choicePet"
           :disabled="combating || noNulls || !wallet.connected"
         >
           <svg
@@ -71,7 +111,7 @@
 <script>
 import { markRaw } from 'vue'
 import { MyNulls } from '@/backends'
-import { calcNullsImage, calcColor, addDecimal, randChoiceNum, guid } from '@/utils/common'
+import { calcNullsImage, calcColor, addDecimal, randint, guid } from '@/utils/common'
 import { WALLET_ERRORS } from '@/utils/wallet/constants'
 import Nulls from '@/components/Items/NullsItem.vue'
 import NoNulls from '@/components/Items/NoNulls.vue'
@@ -89,6 +129,12 @@ export default {
       default: undefined
     }
   },
+  watch: {
+    nullsIndex(newVal) {
+      this.displayNulls = this.nulls.slice(newVal, newVal + 3)
+      this.myPetId = this.displayNulls[this.displayNulls.length > 2 ? 1 : 0].pet_id
+    }
+  },
   data() {
     return {
       addDecimal,
@@ -103,7 +149,8 @@ export default {
       displayNulls: [],
       combatTranscation: '',
       requestKey: '',
-      combatKey: ''
+      combatKey: '',
+      nullsIndex: 0
     }
   },
   async created() {
@@ -115,6 +162,15 @@ export default {
   computed: {
     noNulls() {
       return this.nulls?.length < 1
+    },
+    petNotSelect() {
+      return !(this.myPetId >= 0)
+    },
+    couldNotLeftChoice() {
+      return this.nullsIndex < 1
+    },
+    couldNotRightChoice() {
+      return this.nullsIndex > this.nulls.length - 4
     }
   },
   methods: {
@@ -163,9 +219,9 @@ export default {
 
 
       this.updateMyNulls()
-      this.updateDataInterval = setInterval(() => {
+      /* this.updateDataInterval = setInterval(() => {
         this.updateMyNulls(true)
-      }, 10000)
+      }, 10000) */
     },
     selectNulls(n) {
       this.myPetId = n.pet_id
@@ -181,7 +237,7 @@ export default {
         this.fetching = false
         if (data.code === 200) {
           this.nulls = data.data
-          this.getRandNulls()
+          this.choicePet()
           if (!isAutoUpdate && this.paramStore.autoSelectNulls) this.handleCombat()
         }
       })
@@ -191,9 +247,16 @@ export default {
       this.$root.closeGlobalModal()
       this.$router.push({ name: 'ArenaCombat', params: { arena.item_id: this.paramStore.arena.item_id, myPetId: this.myPetId } })
     }, */
-    getRandNulls() {
-      this.displayNulls = [...new Set(randChoiceNum(this.nulls, 3).filter(i => i))]
-      this.myPetId = this.displayNulls[Math.floor(Math.random() * this.displayNulls.length)]?.pet_id
+    choicePet() {
+      /* this.displayNulls = [...new Set(randChoiceNum(this.nulls, 3).filter(i => i))]
+      this.myPetId = this.displayNulls[Math.floor(Math.random() * this.displayNulls.length)]?.pet_id */
+      this.nullsIndex = this.nulls.length > 2 ? randint(0, this.nulls.length - 3) : 0
+    },
+    choiceLeft() {
+      this.nullsIndex--
+    },
+    choiceRight() {
+      this.nullsIndex++
     },
     async handleCombat() {
       if (!this.myPetId) return this.$message.error('Please choose your nulls before the combat.')
@@ -255,9 +318,8 @@ export default {
   flex-wrap: wrap;
   justify-content: center;
   align-items: center;
-  width: 700px;
-  height: 400px;
-  overflow: auto;
+  height: 260px;
+  overflow: hidden;
 }
 
 .arena-container {
@@ -307,6 +369,7 @@ export default {
 }
 
 .nulls-selected {
+  transform: scale(1.1);
   background-color: #fff4c3;
   border: 2px solid #ff7427;
 }
@@ -324,5 +387,30 @@ export default {
   border-radius: 8px;
   font-size: 12px;
   margin-left: 4px;
+}
+
+.current-nulls {
+  font-size: 22px;
+  font-weight: bold;
+  color: #00367f;
+  text-align: center;
+  font-style: italic;
+  background-color: #aeceff4d;
+  border-radius: 32px;
+  padding: 16px 32px;
+}
+
+.list-complete-item {
+  transition: all 0.4s ease;
+}
+
+.list-complete-enter-from,
+.list-complete-leave-to {
+  opacity: 0;
+  transform: translateY(30px);
+}
+
+.list-complete-leave-active {
+  position: absolute;
 }
 </style>
