@@ -267,7 +267,7 @@ export default {
       const cAddr = record.challenger_address.toLowerCase()
       const imWin = this.calcImWin(record)
       if (cAddr === this.wallet.address) return imWin ? record.value : record.tickets
-      return record.value
+      return imWin ? 0 : record.value
     },
     imGuardians(record) {
       return record.ring_address.toLowerCase() === this.wallet.address
