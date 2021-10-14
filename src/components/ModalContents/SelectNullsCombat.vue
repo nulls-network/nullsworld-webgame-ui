@@ -35,10 +35,10 @@
             <NoNulls v-if="!wallet.connected || noNulls" />
             <transition-group name="list-complete" v-else>
               <div
-                v-for="n in displayNulls"
+                v-for="(n, idx) in displayNulls"
                 :key="n"
                 :class="[n.pet_id === myPetId ? 'nulls-selected' : '', 'nulls list-complete-item']"
-                @click="selectNulls(n)"
+                @click="selectNulls(n, idx)"
               >
                 <div>
                   <img style="height: 120px;" :src="`/nulls${calcNullsImage(n.pet_id)}.png`" />
@@ -223,8 +223,10 @@ export default {
         this.updateMyNulls(true)
       }, 10000) */
     },
-    selectNulls(n) {
+    selectNulls(n, idx) {
       this.myPetId = n.pet_id
+      if (idx === 0 && !this.couldNotLeftChoice) this.choiceLeft()
+      else if (idx === 2 && !this.couldNotRightChoice) this.choiceRight()
     },
     randColor() {
       const items = ['blue', 'purple', 'red', 'orange']
