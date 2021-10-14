@@ -3,8 +3,9 @@
     <div v-if="renderAnime" class="anime-mask">
       <canvas :class="animeCanvasClass" ref="animeCanvasDom" />
     </div>
-    <div class="nulls-status-icon" v-if="nullsStatusIcon">
-      <img :src="`/${nullsStatusIcon}.png`" />
+    <div class="nulls-status-icon" v-if="nullsStatusIcon || isSale">
+      <img v-if="nullsStatusIcon" :src="`/${nullsStatusIcon}.png`" />
+      <img v-if="isSale" src="/status-sale.png" />
     </div>
     <div style="height: 127px">
       <img :class="['nulls-image']" :src="`/nulls${calcNullsImage(id)}.png`" />
@@ -149,6 +150,9 @@ export default {
         }
       }
       return dict[this.data.status] || {}
+    },
+    isSale() {
+      return this.data?.is_sell === 1
     }
   }
 }
@@ -265,11 +269,13 @@ export default {
   position: absolute;
   left: 10px;
   top: 10px;
+  display: flex;
 }
 
 .nulls-status-icon img {
   height: 37px;
   width: 37px;
+  margin-right: 4px;
 }
 
 .border-guardians {
