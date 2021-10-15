@@ -41,7 +41,7 @@
     </a-spin>
     <div class="flex justify-end px-8 py-8">
       <a-pagination
-        @change="updateMyNulls"
+        @change="updateMyNulls(false)"
         show-quick-jumper
         :defaultPageSize="pageSize"
         v-model:current="page"
@@ -67,6 +67,7 @@ export default {
   },
   data() {
     return {
+      lastBlockTime: 0,
       page: 1,
       total: 0,
       pageSize: 20,
@@ -111,6 +112,10 @@ export default {
     clearInterval(this.updateInterval)
   },
   methods: {
+    async updateBlockTime() {
+      const { timestamp, status } = await this.wallet.getLatestBlockTimestamp()
+      if (status) this.lastBlockTime = timestamp
+    },
     onDisconnect() {
       clearInterval(this.updateInterval)
     },
@@ -121,6 +126,11 @@ export default {
       this.updateMyNulls()
       this.updateInterval = setInterval(() => {
         this.updateMyNulls(true)
+      }, 10000)
+
+      this.updateBlockTime()
+      this.updateBlockTimestampInterval = setInterval(() => {
+        this.updateBlockTime()
       }, 10000)
     },
     async handleNullsButton(nulls) {
@@ -147,7 +157,7 @@ export default {
       const nulls = data.data.rows
       for (const idx in nulls) {
         const item = nulls[idx]
-        item.status_code = item.status
+          item.status_code = item.status
         item.status = this.statusDict[item.status]
       }
       this.total = data.data.count

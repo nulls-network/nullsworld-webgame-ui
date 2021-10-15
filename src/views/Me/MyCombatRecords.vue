@@ -146,7 +146,7 @@
     </a-spin>
     <div class="paging-bar px-10 pb-10 pt-4">
       <a-pagination
-        @change="fetchData"
+        @change="fetchData(false)"
         show-quick-jumper
         v-model:current="page"
         :total="total"

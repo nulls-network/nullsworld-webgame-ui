@@ -121,7 +121,7 @@
         </a-spin>
         <div class="paging-bar px-10 pb-10 pt-4">
           <a-pagination
-            @change="fetchRingList"
+            @change="fetchRingList(false)"
             show-quick-jumper
             v-model:current="currentPage"
             :total="total"

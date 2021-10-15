@@ -39,7 +39,7 @@
 
           <div class="flex justify-end px-8 py-8">
             <a-pagination
-              @change="fetchTradList"
+              @change="fetchTradList(false)"
               show-quick-jumper
               v-model:current="page"
               :total="total"
