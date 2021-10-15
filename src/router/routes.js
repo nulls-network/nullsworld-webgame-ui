@@ -3,6 +3,7 @@ import RecentTrading from '@/views/Dashboard/RecentTrading.vue'
 import RecentCombat from '@/views/Dashboard/RecentCombat.vue'
 
 import ArenaHome from '@/views/Arena/ArenaHome.vue'
+import CombatInfo from '@/views/Arena/CombatInfo.vue'
 
 import MarketHome from '@/views/Market/MarketHome.vue'
 import MarketNullsInfo from '@/views/Market/MarketNullsInfo.vue'
@@ -48,6 +49,14 @@ export const routes = [
     component: ArenaHome,
     // component: () => import('@/views/Arena/ArenaHome.vue'),
     meta: { title: 'Arena', }
+  },
+  {
+    name: 'CombatInfo',
+    path: '/arena/combat/:combatId',
+    component: CombatInfo,
+    // component: () => import('@/views/Arena/CombatInfo.vue'),
+    meta: { title: 'CombatInfo', },
+    props: true
   },
   // Market ----------------------------
   {

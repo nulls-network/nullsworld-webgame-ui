@@ -25,9 +25,10 @@
             class="info-item justify-between items-center"
             v-for="record in ringRecords"
             :key="`${record.id}-ring-record`"
+            @click="handleReplay(record)"
           >
             <div class="flex items-center">
-              <a-image class="ring-image" :src="`/gamebg${calcArenaImage(record.item_id)}.jpg`" />
+              <a-image class="ring-image" @click.stop :src="`/gamebg${calcArenaImage(record.item_id)}.jpg`" />
               <div>
                 <div :class="`info-block-num ${calcColor(record.item_id)}`">#{{ record.item_id }}</div>
                 <a-tooltip>
@@ -55,6 +56,7 @@
                 <div class="info-text">
                   <a
                     :href="accountExplorer(record.ring_address)"
+                    @click.stop
                     target="_blank"
                   >{{ ethAddress(record.ring_address) }}</a>
                 </div>
@@ -70,6 +72,7 @@
                 <div class="info-text">
                   <a
                     :href="accountExplorer(record.challenger_address)"
+                    @click.stop
                     target="_blank"
                   >{{ ethAddress(record.challenger_address) }}</a>
                 </div>
@@ -85,6 +88,7 @@
                 <div :class="[record.isWin == 0 ? 'color-red' : 'color-green', 'info-text']">
                   <a
                     :href="accountExplorer(record.token)"
+                    @click.stop
                     target="_blank"
                     style="font-weight: bold;"
                   >{{ record.isWin == 0 ? '-' : '+' }}{{ formatNumber(removeDecimal(record.value, record.token_precision)) }} {{ record.token_name }}</a>
@@ -97,7 +101,7 @@
                   Transcation Hash:
                   <div class="font-bold">{{ record.tx_hash }}</div>
                 </template>
-                <button class="info-item-button pop-button" @click="handleReplay(record.id)">
+                <button class="info-item-button pop-button" @click.stop="handleReplay(record)">
                   <!-- <a :href="txExplorer(record.tx_hash)" target="_blank" style="font-weight: bold;">
                     <img src="/button1.png" />
                   </a>-->
@@ -108,7 +112,7 @@
           </div>
           <div v-if="pagination" class="pagination-bar">
             <a-pagination
-              @change="fetchRingRecord"
+              @change="fetchRingRecord(false)"
               show-quick-jumper
               v-model:current="page"
               :total="recordsTotal"
@@ -120,7 +124,12 @@
     </div>
   </div>
   <CombatReplayModal v-model="showModal">
-    <CombatReplay v-if="renderReplayModal" key="CombatReplayContent" :combatId="replayCombatId" />
+    <CombatReplay
+      v-if="renderReplayModal"
+      key="CombatReplayContent"
+      :combatId="replayCombatId"
+      :combat-data="arenaData"
+    />
   </CombatReplayModal>
 </template>
 
@@ -148,7 +157,8 @@ export default {
       showModal: false,
       replayCombatId: undefined,
       renderReplayModal: false,
-      renderChangeTimeout: undefined
+      renderChangeTimeout: undefined,
+      arenaData: {}
     }
   },
   props: {
@@ -210,8 +220,9 @@ export default {
     navigateTo(name) {
       name && this.$router.push({ name })
     },
-    handleReplay(combatId) {
-      this.replayCombatId = combatId
+    handleReplay(combat) {
+      this.replayCombatId = combat.id
+      this.arenaData = combat
       this.showModal = true
     }
   }
