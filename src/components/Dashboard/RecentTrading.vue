@@ -19,13 +19,19 @@
       <a-spin tip="Loading..." :spinning="fetching">
         <div class="item-list-card-body">
           <empty v-show="tradeRecords?.length < 1" />
-          <div
+          <router-link
+            tag="div"
+            :to="{ path: `/nulls/details/${record.pet_id}` }"
             class="info-item justify-between items-center"
             v-for="record in tradeRecords"
             :key="`${record.id}-trade-record`"
           >
             <div class="flex items-center">
-              <a-image class="ring-image" :src="`/nulls${calcNullsImage(record.pet_id)}.png`" />
+              <a-image
+                @click.stop
+                class="ring-image"
+                :src="`/nulls${calcNullsImage(record.pet_id)}.png`"
+              />
               <div>
                 <div :class="`info-block-num ${calcColor(record.pet_id)}`">#{{ record.pet_id }}</div>
                 <a-tooltip>
@@ -53,6 +59,7 @@
                 <div class="info-text">
                   <a
                     :href="accountExplorer(record.sell_user_address)"
+                    @click.stop
                     target="_blank"
                   >{{ ethAddress(record.sell_user_address) }}</a>
                 </div>
@@ -68,6 +75,7 @@
                 <div class="info-text">
                   <a
                     :href="accountExplorer(record.buy_user_address)"
+                    @click.stop
                     target="_blank"
                   >{{ ethAddress(record.buy_user_address) }}</a>
                 </div>
@@ -83,6 +91,7 @@
                 <div class="info-text">
                   <a
                     :href="accountExplorer(record.current_contract)"
+                    @click.stop
                     target="_blank"
                     style="font-weight: bold; color: #01ba96;"
                   >{{ formatNumber(removeDecimal(record.price, record.current_precision)) }} {{ record.current }}</a>
@@ -95,17 +104,17 @@
                   Transcation Hash:
                   <div class="font-bold">{{ record.tx_hash }}</div>
                 </template>
-                <a :href="txExplorer(record.tx_hash)" target="_blank">
+                <a :href="txExplorer(record.tx_hash)" @click.stop target="_blank">
                   <button class="info-item-button pop-button">
                     <img src="/button2.png" />
                   </button>
                 </a>
               </a-tooltip>
             </div>
-          </div>
+          </router-link>
           <div v-if="pagination" class="pagination-bar">
             <a-pagination
-              @change="fetchTradingRecord"
+              @change="fetchTradingRecord(false)"
               show-quick-jumper
               v-model:current="page"
               :total="recordsTotal"
