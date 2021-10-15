@@ -1,7 +1,7 @@
 import axios from '@/utils/axios'
 
 
-export const BASE_API = 'https://nulls-world-api-20kew4nzl-nulls-zkrandom.vercel.app/api/' //import.meta.env.VUE_APP_API_BASE
+export const BASE_API = 'https://nulls-world-api.vercel.app/api/' //import.meta.env.VUE_APP_API_BASE
 
 
 /**
