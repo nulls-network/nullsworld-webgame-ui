@@ -3,7 +3,7 @@
     <nav class="relative">
       <div
         id="hight-light-arrow"
-        v-if="hightLightArrowLeft"
+        v-show="hightLightArrowLeft"
         :style="`left: ${hightLightArrowLeft}px;`"
       >
         <img src="/hightLight.png" />
@@ -124,7 +124,7 @@ export default {
       this.updateArrowPosition()
     }
   },
-  mounted() {
+  created() {
     window.addEventListener('resize', this.updateArrowPosition)
   },
   data() {
