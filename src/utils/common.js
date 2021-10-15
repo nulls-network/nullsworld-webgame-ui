@@ -14,11 +14,7 @@ export function calcApproveAmount(decimal) {
 }
 
 export function calcNullsImage(nullsId) {
-  const s = nullsId & 7
-  if (s === 0) return 1
-  if (s === 6) return 2
-  if (s === 7) return 3
-  return s
+  return (nullsId & 15) + 1
 }
 
 export function calcArenaImage(arenaId) {
