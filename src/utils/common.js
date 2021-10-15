@@ -1,5 +1,6 @@
 import moment from 'moment'
 import { BigNumber, BigNumberish } from 'ethers'
+import html2canvas from 'html2canvas'
 
 export function cutEthAddress(address, bit = 6) {
   return address
@@ -118,7 +119,7 @@ export function randChoiceNum(obj, num) {
   return result
 }
 
-export const getStore = (name) => {
+export function getStore(name) {
   if (!name) return
   let result = window.localStorage.getItem(name)
   try {
@@ -131,12 +132,12 @@ export const getStore = (name) => {
 }
 
 
-export const removeStore = (name) => {
+export function removeStore(name) {
   if (!name) return
   window.localStorage.removeItem(name)
 }
 
-export const setStore = (name, content) => {
+export function setStore(name, content) {
   if (!name) return
   if (typeof content !== 'string') {
     content = JSON.stringify(content)
@@ -144,25 +145,58 @@ export const setStore = (name, content) => {
   window.localStorage.setItem(name, content)
 }
 
-export const GetLang = function () {
+export function GetLang() {
   let sysLang = navigator.language.toLowerCase()
   let langs = ['en-us', 'zh-cn']
   !langs.includes(sysLang) && (sysLang = 'en-us')
   return getStore('lang') || sysLang || 'en-us'
 }
 
-export const parseUrlQuery = function () {
-  var result = {}
-  var url = window.location.href
-  var query = url.split('?')[1]
+export function parseUrlQuery() {
+  const result = {}
+  const url = window.location.href
+  const query = url.split('?')[1]
   if (query) {
-    var queryArr = query.split('&')
-    queryArr.forEach(function (item) {
-      var key = item.split('=')[0]
+    const queryArr = query.split('&')
+    queryArr.forEach(item => {
+      const key = item.split('=')[0]
       result[key] = item.split('=')[1]
     })
   }
   return result
+}
+
+export function dataURLToBlob(dataurl) {
+  const arr = dataurl.split(',')
+  const mime = arr[0].match(/:(.*?);/)[1]
+  const bstr = atob(arr[1])
+  let n = bstr.length
+  const u8arr = new Uint8Array(n)
+  while (n--) {
+    u8arr[n] = bstr.charCodeAt(n)
+  }
+  return new Blob([u8arr], { type: mime })
+}
+
+
+/** 
+ * @param {HTMLElement} element
+ **/
+export function saveElementImage(element, imgText) {
+  const a = document.createElement('a')
+  html2canvas(element).then(canvas => {
+    const dom = document.body.appendChild(canvas)
+    dom.style.display = 'none'
+    a.style.display = 'none'
+    document.body.removeChild(dom)
+    const blob = dataURLToBlob(dom.toDataURL('image/png'))
+    a.setAttribute('href', URL.createObjectURL(blob))
+    a.setAttribute('download', imgText + '.png')
+    document.body.appendChild(a)
+    a.click()
+    URL.revokeObjectURL(blob)
+    document.body.removeChild(a)
+  })
 }
 
 export { moment }
