@@ -20,12 +20,12 @@
             <img src="/diamond-box.png" class="h-14 w-14 sm:h-20 sm:w-20 md:h-20 md:w-20" />
           </div>
           <div>
-            <div class="card-info-title">Top Prize pool</div>
+            <div class="card-info-title">Arena Challenge</div>
             <div class="card-info-amount">
-              {{ numberFmt(data?.max_jackpot) }}
+              {{ numberFmt(data?.ring_total) }}
               <span>USDT</span>
             </div>
-            <div class="card-info-amount-convert">≈${{ numberFmt(data?.max_jackpot) }}</div>
+            <div class="card-info-amount-convert">≈${{ numberFmt(data?.ring_total) }}</div>
           </div>
         </div>
         <div class="card-info-item p-3 md:p-5">
@@ -33,12 +33,12 @@
             <img src="/bag1.png" class="h-14 w-14 sm:h-20 sm:w-20 md:h-20 md:w-20" />
           </div>
           <div>
-            <div class="card-info-title">Available Prize pool</div>
+            <div class="card-info-title">Pet Sales</div>
             <div class="card-info-amount">
-              {{ numberFmt(data?.sum_jackpot) }}
+              {{ numberFmt(data?.sell_total) }}
               <span>USDT</span>
             </div>
-            <div class="card-info-amount-convert">≈${{ numberFmt(data?.sum_jackpot) }}</div>
+            <div class="card-info-amount-convert">≈${{ numberFmt(data?.sell_total) }}</div>
           </div>
         </div>
         <div class="card-info-item p-3 md:p-5">
@@ -46,12 +46,12 @@
             <img src="/bag2.png" class="h-14 w-14 sm:h-20 sm:w-20 md:h-20 md:w-20" />
           </div>
           <div>
-            <div class="card-info-title">Cumulative total</div>
+            <div class="card-info-title">Egg Sales</div>
             <div class="card-info-amount">
-              {{ numberFmt(data?.history_max_jackpot) }}
-              <span>USDT</span>
+              {{ data?.egg_total }}
+              <span>Eggs</span>
             </div>
-            <div class="card-info-amount-convert">≈${{ numberFmt(data?.history_max_jackpot) }}</div>
+            <div class="card-info-amount-convert">≈${{ numberFmt(data?.egg_total * 100_000000) }}</div>
           </div>
         </div>
       </div>
