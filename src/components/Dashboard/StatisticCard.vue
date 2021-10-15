@@ -48,10 +48,10 @@
           <div>
             <div class="card-info-title">Egg Sales</div>
             <div class="card-info-amount">
-              {{ data?.egg_total }}
-              <span>Eggs</span>
+              {{ numberFmt(data?.egg_total) }}
+              <span>USDT</span>
             </div>
-            <div class="card-info-amount-convert">≈${{ numberFmt(data?.egg_total * 100_000000) }}</div>
+            <div class="card-info-amount-convert">≈${{ numberFmt(data?.egg_total) }}</div>
           </div>
         </div>
       </div>

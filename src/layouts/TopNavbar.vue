@@ -224,6 +224,7 @@ button {
   transition: 0.2s ease;
   user-select: none;
   cursor: pointer;
+  width: 141px;
 }
 
 .logo:hover {
